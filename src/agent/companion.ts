@@ -4,6 +4,7 @@ import { getMemories } from "../memory/index.ts";
 import { saveConversation, getRecentConversations } from "../memory/conversations.ts";
 import { buildSystemPrompt } from "./prompt.ts";
 import { createReminder, listReminders, deleteReminder } from "../reminders/index.ts";
+import { externalMcpServers } from "../mcp/servers.ts";
 import { db } from "../db/schema.ts";
 import type { AgentTask } from "./types.ts";
 
@@ -112,6 +113,24 @@ const memoryMcp = createSdkMcpServer({
   ],
 });
 
+// Build the active MCP server map — only include external servers when credentials are set
+function buildMcpServers() {
+  const servers: Record<string, (typeof externalMcpServers)[string] | typeof memoryMcp | typeof remindersMcp> = {
+    memory: memoryMcp,
+    reminders: remindersMcp,
+  };
+  if (process.env.SLACK_BOT_TOKEN) servers.slack = externalMcpServers.slack!;
+  if (process.env.CLICKUP_API_KEY) servers.clickup = externalMcpServers.clickup!;
+  return servers;
+}
+
+function buildAllowedTools(): string[] {
+  const tools = ["mcp__memory__*", "mcp__reminders__*"];
+  if (process.env.SLACK_BOT_TOKEN) tools.push("mcp__slack__*");
+  if (process.env.CLICKUP_API_KEY) tools.push("mcp__clickup__*");
+  return tools;
+}
+
 export async function runCompanion(task: AgentTask): Promise<string> {
   const memories = getMemories(task.userId);
   const recentTurns = getRecentConversations(
@@ -120,7 +139,11 @@ export async function runCompanion(task: AgentTask): Promise<string> {
     task.threadId ?? null
   );
 
-  const systemPrompt = buildSystemPrompt(memories, recentTurns);
+  const systemPrompt = buildSystemPrompt(memories, recentTurns, {
+    clickupSpaceId: process.env.CLICKUP_SPACE_ID,
+    clickupMemberId: process.env.CLICKUP_MEMBER_ID,
+    slackEnabled: !!process.env.SLACK_BOT_TOKEN,
+  });
 
   // Save the incoming user message
   saveConversation(task.userId, task.platform, task.threadId ?? null, "user", task.message);
@@ -139,14 +162,8 @@ export async function runCompanion(task: AgentTask): Promise<string> {
       options: {
         systemPrompt,
         tools: [],  // disable built-in file/bash tools
-        allowedTools: [
-          "mcp__memory__*",
-          "mcp__reminders__*",
-        ],
-        mcpServers: {
-          memory: memoryMcp,
-          reminders: remindersMcp,
-        },
+        allowedTools: buildAllowedTools(),
+        mcpServers: buildMcpServers(),
         maxTurns: 10,
       },
     })) {
