@@ -1,19 +1,26 @@
 {
-    "mcpServers": {
-        "slack": {
-            "command": "npx",
-            "args": ["-y", "@modelcontextprotocol/server-slack"],
-            "env": {
-                "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
-                "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
-            }
-        },
-        "clickup": {
-            "command": "npx",
-            "args": ["-y", "mcp-remote", "https://mcp.clickup.com/mcp"],
-            "env": {
-                "CLICKUP_API_KEY": "${CLICKUP_API_KEY}"
-            }
-        }
+  "mcpServers": {
+    "slack": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-slack"],
+      "env": {
+        "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}",
+        "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
+      }
+    },
+    "github": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-github"],
+      "env": {
+        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
+      }
+    },
+    "clickup": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://mcp.clickup.com/mcp"],
+      "env": {
+        "CLICKUP_API_KEY": "${CLICKUP_API_KEY}"
+      }
     }
+  }
 }
