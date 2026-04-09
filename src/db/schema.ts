@@ -31,14 +31,21 @@ export function migrate(): void {
       createdAt   TEXT DEFAULT (datetime('now'))
     );
 
-    CREATE TABLE IF NOT EXISTS reminders (
+    -- unified scheduler: replaces the old one-shot reminders table
+    -- schedule: cron expression ("54 5 * * *") or ISO datetime ("2026-04-09T17:00:00Z")
+    -- mode: "message" = send prompt text directly | "agent" = run through runCompanion
+    CREATE TABLE IF NOT EXISTS scheduled_tasks (
       id          INTEGER PRIMARY KEY,
       userId      TEXT NOT NULL,
-      message     TEXT NOT NULL,
-      scheduledAt TEXT NOT NULL,
+      label       TEXT NOT NULL,
+      prompt      TEXT NOT NULL,
+      schedule    TEXT NOT NULL,
+      recurring   INTEGER DEFAULT 0,
+      mode        TEXT NOT NULL DEFAULT 'message',
       platform    TEXT NOT NULL,
       channelId   TEXT NOT NULL,
-      fired       INTEGER DEFAULT 0,
+      active      INTEGER DEFAULT 1,
+      lastFiredAt TEXT,
       createdAt   TEXT DEFAULT (datetime('now'))
     );
 

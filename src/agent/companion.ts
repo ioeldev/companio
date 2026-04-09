@@ -3,68 +3,75 @@ import { z } from "zod";
 import { getMemories } from "../memory/index.ts";
 import { saveConversation, getRecentConversations } from "../memory/conversations.ts";
 import { buildSystemPrompt } from "./prompt.ts";
-import { createReminder, listReminders, deleteReminder } from "../reminders/index.ts";
+import { createTask, listTasks, deleteTask } from "../scheduler/index.ts";
+import { registerTask, unregisterTask } from "../scheduler/engine.ts";
 import { externalMcpServers } from "../mcp/servers.ts";
 import { db } from "../db/schema.ts";
 import type { AgentTask } from "./types.ts";
 
-// In-process MCP server for reminders (Phase 2)
-// Built once at module load — reused across all calls
-const remindersMcp = createSdkMcpServer({
-  name: "reminders",
+// In-process MCP server for the unified scheduler
+const schedulerMcp = createSdkMcpServer({
+  name: "scheduler",
   version: "1.0.0",
   tools: [
     tool(
-      "create_reminder",
-      "Schedule a reminder message to be sent to the user at a future time.",
+      "create_task",
+      `Schedule a task to run at a future time.
+- For a one-time event use an ISO 8601 datetime as schedule, e.g. "2026-04-09T17:00:00Z"
+- For a recurring task use a cron expression, e.g. "54 5 * * *" (every day at 05:54)
+- mode "message": sends the prompt text directly to the user
+- mode "agent": runs the prompt through the AI (use for briefings that need tool calls)`,
       {
-        message: z.string().describe("The reminder message to send"),
-        scheduledAt: z.string().describe(
-          "ISO 8601 datetime when the reminder should fire, e.g. 2024-12-31T15:00:00Z"
-        ),
-        platform: z.string().describe("Platform to send the reminder on (e.g. telegram)"),
-        channelId: z.string().describe("Channel or chat ID to send the reminder to"),
-        userId: z.string().describe("User ID to associate this reminder with"),
+        userId: z.string().describe("User ID"),
+        label: z.string().describe("Short human-readable name, e.g. 'morning briefing'"),
+        prompt: z.string().describe("Message to send or prompt to run through the agent"),
+        schedule: z.string().describe("Cron expression or ISO 8601 datetime"),
+        recurring: z.boolean().describe("true = repeats on cron schedule, false = fires once"),
+        mode: z.enum(["message", "agent"]).describe("'message' = send text directly, 'agent' = run through AI"),
+        platform: z.string().describe("Platform, e.g. 'telegram'"),
+        channelId: z.string().describe("Channel or chat ID to deliver to"),
       },
       async (args) => {
-        const id = createReminder(
-          args.userId,
-          args.message,
-          args.scheduledAt,
-          args.platform,
-          args.channelId
+        const task = createTask(
+          args.userId, args.label, args.prompt, args.schedule,
+          args.recurring, args.mode, args.platform, args.channelId
         );
+        registerTask(task);
         return {
-          content: [{ type: "text" as const, text: `Reminder created with id=${id}, fires at ${args.scheduledAt}` }],
+          content: [{
+            type: "text" as const,
+            text: `Task created (id=${task.id}): "${task.label}" — ${task.schedule}${task.recurring ? " (recurring)" : " (one-shot)"}`,
+          }],
         };
       }
     ),
     tool(
-      "list_reminders",
-      "List all pending reminders for a user.",
+      "list_tasks",
+      "List all active scheduled tasks for a user.",
       {
-        userId: z.string().describe("User ID to list reminders for"),
+        userId: z.string().describe("User ID"),
       },
       async (args) => {
-        const reminders = listReminders(args.userId);
-        if (reminders.length === 0) {
-          return { content: [{ type: "text" as const, text: "No pending reminders." }] };
+        const tasks = listTasks(args.userId);
+        if (tasks.length === 0) {
+          return { content: [{ type: "text" as const, text: "No active tasks." }] };
         }
-        const text = reminders
-          .map((r) => `[${r.id}] "${r.message}" at ${r.scheduledAt}`)
-          .join("\n");
+        const text = tasks.map((t) =>
+          `[${t.id}] "${t.label}" | ${t.schedule} | ${t.recurring ? "recurring" : "one-shot"} | mode=${t.mode}`
+        ).join("\n");
         return { content: [{ type: "text" as const, text }] };
       }
     ),
     tool(
-      "delete_reminder",
-      "Delete a pending reminder by its ID.",
+      "delete_task",
+      "Cancel and delete a scheduled task by its ID.",
       {
-        id: z.number().describe("Reminder ID to delete"),
+        id: z.number().describe("Task ID to delete"),
       },
       async (args) => {
-        deleteReminder(args.id);
-        return { content: [{ type: "text" as const, text: `Reminder ${args.id} deleted.` }] };
+        unregisterTask(args.id);
+        deleteTask(args.id);
+        return { content: [{ type: "text" as const, text: `Task ${args.id} deleted.` }] };
       }
     ),
   ],
@@ -115,9 +122,9 @@ const memoryMcp = createSdkMcpServer({
 
 // Build the active MCP server map — only include external servers when credentials are set
 function buildMcpServers() {
-  const servers: Record<string, (typeof externalMcpServers)[string] | typeof memoryMcp | typeof remindersMcp> = {
+  const servers: Record<string, typeof schedulerMcp | typeof memoryMcp | (typeof externalMcpServers)[string]> = {
     memory: memoryMcp,
-    reminders: remindersMcp,
+    scheduler: schedulerMcp,
   };
   if (process.env.SLACK_BOT_TOKEN) servers.slack = externalMcpServers.slack!;
   if (process.env.CLICKUP_API_KEY) servers.clickup = externalMcpServers.clickup!;
@@ -125,7 +132,7 @@ function buildMcpServers() {
 }
 
 function buildAllowedTools(): string[] {
-  const tools = ["mcp__memory__*", "mcp__reminders__*"];
+  const tools = ["mcp__memory__*", "mcp__scheduler__*"];
   if (process.env.SLACK_BOT_TOKEN) tools.push("mcp__slack__*");
   if (process.env.CLICKUP_API_KEY) tools.push("mcp__clickup__*");
   return tools;
@@ -148,7 +155,6 @@ export async function runCompanion(task: AgentTask): Promise<string> {
   // Save the incoming user message
   saveConversation(task.userId, task.platform, task.threadId ?? null, "user", task.message);
 
-  // Log event
   db.run(
     `INSERT INTO events (userId, type, payload) VALUES (?, 'message_received', ?)`,
     [task.userId, JSON.stringify({ platform: task.platform, trigger: task.trigger })]
@@ -161,7 +167,7 @@ export async function runCompanion(task: AgentTask): Promise<string> {
       prompt: task.message,
       options: {
         systemPrompt,
-        tools: [],  // disable built-in file/bash tools
+        tools: [],
         allowedTools: buildAllowedTools(),
         mcpServers: buildMcpServers(),
         maxTurns: 10,
