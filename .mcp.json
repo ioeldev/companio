@@ -8,13 +8,6 @@
         "SLACK_TEAM_ID": "${SLACK_TEAM_ID}"
       }
     },
-    "github": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-github"],
-      "env": {
-        "GITHUB_TOKEN": "${GITHUB_TOKEN}"
-      }
-    },
     "clickup": {
       "command": "npx",
       "args": ["-y", "mcp-remote", "https://mcp.clickup.com/mcp"],

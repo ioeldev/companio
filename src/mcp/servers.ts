@@ -9,13 +9,6 @@ export const externalMcpServers: Record<string, McpServerConfig> = {
       SLACK_TEAM_ID: process.env.SLACK_TEAM_ID ?? "",
     },
   },
-  github: {
-    command: "npx",
-    args: ["-y", "@modelcontextprotocol/server-github"],
-    env: {
-      GITHUB_TOKEN: process.env.GITHUB_TOKEN ?? "",
-    },
-  },
   clickup: {
     command: "npx",
     args: ["-y", "mcp-remote", "https://mcp.clickup.com/mcp"],
