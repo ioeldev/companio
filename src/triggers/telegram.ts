@@ -53,7 +53,11 @@ export function startTelegram(): void {
 
     try {
       const response = await runCompanion(task);
-      await ctx.reply(response);
+      try {
+        await ctx.reply(response, { parse_mode: "Markdown" });
+      } catch {
+        await ctx.reply(response);
+      }
     } catch (err) {
       console.error("Companion error:", err);
       await ctx.reply("Something went wrong. Please try again.");
