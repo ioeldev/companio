@@ -1,8 +1,8 @@
 import { Bot } from "grammy";
 import { runCompanion } from "../agent/companion.ts";
 import type { AgentTask } from "../agent/types.ts";
+import type { Platform } from "./platform.ts";
 
-// Rate limiting: track per-user message timestamps
 const rateLimitMap = new Map<string, number[]>();
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 10;
@@ -16,57 +16,70 @@ function isRateLimited(userId: string): boolean {
   return recent.length > RATE_LIMIT_MAX;
 }
 
-let botInstance: Bot | null = null;
+class TelegramPlatform implements Platform {
+  readonly name = "telegram";
+  private bot: Bot | null = null;
 
-export function getTelegramBot(): Bot | null {
-  return botInstance;
-}
-
-export function startTelegram(): void {
-  const token = process.env.TELEGRAM_BOT_TOKEN;
-  if (!token) {
-    console.warn("TELEGRAM_BOT_TOKEN not set, skipping Telegram");
-    return;
-  }
-
-  const bot = new Bot(token);
-  botInstance = bot;
-
-  bot.on("message:text", async (ctx) => {
-    const userId = String(ctx.from?.id ?? "unknown");
-    const chatId = String(ctx.chat.id);
-    const text = ctx.message.text;
-
-    if (isRateLimited(userId)) {
-      await ctx.reply("Slow down, I'm thinking.");
+  start(): void {
+    const token = process.env.TELEGRAM_BOT_TOKEN;
+    if (!token) {
+      console.warn("TELEGRAM_BOT_TOKEN not set, skipping Telegram");
       return;
     }
 
-    const task: AgentTask = {
-      trigger: "telegram",
-      userId,
-      channelId: chatId,
-      message: text,
-      threadId: chatId,
-      platform: "telegram",
-    };
+    const bot = new Bot(token);
+    this.bot = bot;
 
-    try {
-      const response = await runCompanion(task);
-      try {
-        await ctx.reply(response, { parse_mode: "Markdown" });
-      } catch {
-        await ctx.reply(response);
+    bot.on("message:text", async (ctx) => {
+      const userId = String(ctx.from?.id ?? "unknown");
+      const chatId = String(ctx.chat.id);
+      const text = ctx.message.text;
+
+      if (isRateLimited(userId)) {
+        await ctx.reply("Slow down, I'm thinking.");
+        return;
       }
-    } catch (err) {
-      console.error("Companion error:", err);
-      await ctx.reply("Something went wrong. Please try again.");
+
+      const task: AgentTask = {
+        trigger: "telegram",
+        userId,
+        channelId: chatId,
+        message: text,
+        threadId: chatId,
+        platform: "telegram",
+      };
+
+      try {
+        const response = await runCompanion(task);
+        try {
+          await ctx.reply(response, { parse_mode: "Markdown" });
+        } catch {
+          await ctx.reply(response);
+        }
+      } catch (err) {
+        console.error("Companion error (Telegram):", err);
+        await ctx.reply("Something went wrong. Please try again.");
+      }
+    });
+
+    bot.start().catch((err) => {
+      console.error("Telegram bot error:", err);
+    });
+
+    console.log("📱 Telegram bot started");
+  }
+
+  async send(channelId: string, message: string): Promise<void> {
+    if (!this.bot) {
+      console.error("Telegram bot not initialized, cannot send message");
+      return;
     }
-  });
-
-  bot.start().catch((err) => {
-    console.error("Telegram bot error:", err);
-  });
-
-  console.log("📱 Telegram bot started");
+    try {
+      await this.bot.api.sendMessage(channelId, message, { parse_mode: "Markdown" });
+    } catch {
+      await this.bot.api.sendMessage(channelId, message);
+    }
+  }
 }
+
+export const telegramPlatform = new TelegramPlatform();
