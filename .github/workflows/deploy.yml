@@ -5,15 +5,21 @@
 # - Put runtime secrets in a server-side `.env` (not in git), e.g. next to the app or via systemd EnvironmentFile.
 # - Run the bot under systemd/pm2 with WorkingDirectory pointing at the same directory you deploy to.
 #
-# Optional GitHub repo Variables (Settings → Secrets and variables → Actions → Variables):
-# - DEPLOY_TARGET_DIR — e.g. /opt/companio. If set, the workflow rsyncs the repo there (excluding .git,
-#   node_modules, and companio.db*), then runs install/typecheck in that directory. If unset, install runs
-#   in the Actions workspace only (fine only if your service runs from that path).
+# Variables (DEPLOY_TARGET_DIR, SYSTEMD_*, etc.):
+# - Either: Repository variables — Settings → Secrets and variables → Actions → Variables (repository).
+# - Or: Environment variables — Settings → Environments → production (or your env name). Those are only
+#   visible to jobs that declare `environment:` below. Change `production` to match your environment name.
 #
-# Optional GitHub repo Secrets:
-# - DEPLOY_COMMAND — if set, executed instead of `sudo systemctl restart companio` (e.g. `pm2 restart companio`).
+# Optional Variables:
+# - DEPLOY_TARGET_DIR — e.g. /home/seed/companio. Rsyncs the repo there (excludes .git, node_modules, .env,
+#   companio.db*), then install/typecheck in that directory.
+# - SYSTEMD_SCOPE — `system` (default) or `user` (no sudo; use user unit + loginctl enable-linger).
+# - SYSTEMD_UNIT — default companio.
 #
-# The runner user typically needs passwordless sudo for the restart command, or use DEPLOY_COMMAND without sudo.
+# Optional Secrets (repository or same Environment):
+# - DEPLOY_COMMAND — overrides systemctl restart (e.g. pm2 restart companio).
+#
+# Restart: CI has no TTY — use SYSTEMD_SCOPE=user, or NOPASSWD sudo for systemctl, or DEPLOY_COMMAND.
 
 name: Deploy
 
@@ -30,6 +36,7 @@ concurrency:
 jobs:
     deploy:
         runs-on: self-hosted
+        environment: production
 
         steps:
             - name: Checkout
@@ -53,6 +60,7 @@ jobs:
                   rsync -a --delete \
                     --exclude=.git \
                     --exclude=node_modules \
+                    --exclude=.env \
                     --exclude=companio.db \
                     --exclude='companio.db-*' \
                     "${GITHUB_WORKSPACE}/" "${DEPLOY_TARGET_DIR}/"
@@ -72,12 +80,29 @@ jobs:
             - name: Restart application
               env:
                   DEPLOY_COMMAND: ${{ secrets.DEPLOY_COMMAND }}
+                  SYSTEMD_UNIT: ${{ vars.SYSTEMD_UNIT }}
+                  SYSTEMD_SCOPE: ${{ vars.SYSTEMD_SCOPE }}
               run: |
                   set -euo pipefail
+                  UNIT="${SYSTEMD_UNIT:-companio}"
+                  SCOPE="${SYSTEMD_SCOPE:-system}"
+
                   if [ -n "${DEPLOY_COMMAND:-}" ]; then
                     echo "Running custom DEPLOY_COMMAND from secrets..."
                     eval "$DEPLOY_COMMAND"
-                  else
-                    echo "Restarting systemd unit: companio"
-                    sudo systemctl restart companio
+                    exit 0
                   fi
+
+                  if [ "${SCOPE}" = "user" ]; then
+                    echo "Restarting user systemd unit: ${UNIT}"
+                    systemctl --user restart "${UNIT}"
+                    exit 0
+                  fi
+
+                  echo "Restarting system systemd unit: ${UNIT} (non-interactive sudo -n)"
+                  if sudo -n systemctl restart "${UNIT}"; then
+                    exit 0
+                  fi
+                  echo "::error::sudo -n systemctl restart failed (no password prompt in CI)."
+                  echo "Fix: set variable SYSTEMD_SCOPE=user, or NOPASSWD for this runner user, or secret DEPLOY_COMMAND."
+                  exit 1
