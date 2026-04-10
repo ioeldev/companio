@@ -12,10 +12,9 @@ export async function respond(
         console.error("Telegram bot not initialized, cannot send message");
         return;
       }
-      // Use MarkdownV2 to render formatted text properly
-      await bot.api.sendMessage(channelId, message, {
-        parse_mode: "MarkdownV2",
-      });
+      // Send message without parse_mode to avoid escaping issues
+      // The message is already well-formatted by Claude
+      await bot.api.sendMessage(channelId, message);
       break;
     }
     case "slack": {

@@ -26,14 +26,12 @@ ${task.threadId ? `- **Thread ID**: ${task.threadId}` : ""}`;
   const platformFormatting = {
     telegram: `
 ## Message Formatting (Telegram)
-- Use Markdown V2 formatting for this platform.
-- Escape special characters: _ * [ ] ( ) ~ \` > # + - = | { } . !
-- For code blocks, use triple backticks: \`\`\`language
-- For inline code, use single backticks: \`code\`
-- For bold: *text*
-- For italic: _text_
-- For links: [text](url)
-- Keep messages concise and well-structured with proper line breaks.`,
+- Write your response with clear formatting and line breaks.
+- Use \`backticks\` for inline code snippets.
+- Use triple backticks for code blocks (e.g., \`\`\`javascript ... \`\`\`).
+- Use markdown syntax like *bold* and _italic_ to add emphasis if helpful.
+- Use [link text](url) for links.
+- Keep messages concise and well-structured.`,
 
     slack: `
 ## Message Formatting (Slack)
