@@ -10,6 +10,64 @@ interface ConversationRow {
   content: string;
 }
 
+/**
+ * Builds platform-specific formatting instructions for the system prompt.
+ * Claude will format its response appropriately for the target platform.
+ */
+function buildPlatformBlock(task: AgentTask): string {
+  const baseContext = `
+## Current Context
+- **Platform**: ${task.platform}
+- **Trigger**: ${task.trigger}
+- **User ID**: ${task.userId}
+- **Channel/Chat ID**: ${task.channelId}
+${task.threadId ? `- **Thread ID**: ${task.threadId}` : ""}`;
+
+  const platformFormatting = {
+    telegram: `
+## Message Formatting (Telegram)
+- Use Markdown V2 formatting for this platform.
+- Escape special characters: _ * [ ] ( ) ~ \` > # + - = | { } . !
+- For code blocks, use triple backticks: \`\`\`language
+- For inline code, use single backticks: \`code\`
+- For bold: *text*
+- For italic: _text_
+- For links: [text](url)
+- Keep messages concise and well-structured with proper line breaks.`,
+
+    slack: `
+## Message Formatting (Slack)
+- Use Slack's mrkdwn format.
+- For code blocks, use triple backticks: \`\`\`
+- For inline code, use single backticks: \`code\`
+- For bold: *text*
+- For italic: _text_
+- For links: <url|text> or just <url>
+- Use emoji where appropriate to enhance clarity.
+- Messages support threads and reactions.`,
+
+    discord: `
+## Message Formatting (Discord)
+- Use Discord's Markdown format.
+- For code blocks, use triple backticks with optional language: \`\`\`language
+- For inline code, use single backticks: \`code\`
+- For bold: **text**
+- For italic: *text* or _text_
+- For links: [text](url)
+- Mentions use @username or <@userid> format.
+- Use embed-friendly formatting (concise sections).`,
+
+    default: `
+## Message Formatting
+- Use clear, readable formatting with appropriate line breaks.
+- Keep the message concise and well-structured.`,
+  };
+
+  const formatting = platformFormatting[task.platform as keyof typeof platformFormatting] || platformFormatting.default;
+
+  return baseContext + formatting;
+}
+
 export interface IntegrationContext {
   clickupSpaceId?: string;
   clickupMemberId?: string;
@@ -24,14 +82,7 @@ export function buildSystemPrompt(
   recentTurns: ConversationRow[],
   integrations: IntegrationContext = {}
 ): string {
-  const platformBlock = `
-## Current Context
-- **Platform**: ${task.platform}
-- **Trigger**: ${task.trigger}
-- **User ID**: ${task.userId}
-- **Channel/Chat ID**: ${task.channelId}
-${task.threadId ? `- **Thread ID**: ${task.threadId}` : ""}
-`;
+  const platformBlock = buildPlatformBlock(task);
   const memoriesBlock =
     memories.length > 0
       ? memories.map((m) => `- ${m.key}: ${m.value}`).join("\n")
