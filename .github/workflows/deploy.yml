@@ -1,0 +1,83 @@
+# Deploy Companio on a VPS with a self-hosted GitHub Actions runner.
+#
+# Setup:
+# - Register the runner on this repo (Settings → Actions → Runners).
+# - Put runtime secrets in a server-side `.env` (not in git), e.g. next to the app or via systemd EnvironmentFile.
+# - Run the bot under systemd/pm2 with WorkingDirectory pointing at the same directory you deploy to.
+#
+# Optional GitHub repo Variables (Settings → Secrets and variables → Actions → Variables):
+# - DEPLOY_TARGET_DIR — e.g. /opt/companio. If set, the workflow rsyncs the repo there (excluding .git,
+#   node_modules, and companio.db*), then runs install/typecheck in that directory. If unset, install runs
+#   in the Actions workspace only (fine only if your service runs from that path).
+#
+# Optional GitHub repo Secrets:
+# - DEPLOY_COMMAND — if set, executed instead of `sudo systemctl restart companio` (e.g. `pm2 restart companio`).
+#
+# The runner user typically needs passwordless sudo for the restart command, or use DEPLOY_COMMAND without sudo.
+
+name: Deploy
+
+on:
+    push:
+        branches:
+            - main
+    workflow_dispatch:
+
+concurrency:
+    group: deploy-${{ github.workflow }}-${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    deploy:
+        runs-on: self-hosted
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v4
+
+            - name: Setup Bun
+              uses: oven-sh/setup-bun@v2
+              with:
+                  bun-version: latest
+
+            - name: Sync to production directory (optional)
+              env:
+                  DEPLOY_TARGET_DIR: ${{ vars.DEPLOY_TARGET_DIR }}
+              run: |
+                  set -euo pipefail
+                  if [ -z "${DEPLOY_TARGET_DIR}" ]; then
+                    echo "DEPLOY_TARGET_DIR not set; using workspace as app root."
+                    exit 0
+                  fi
+                  mkdir -p "${DEPLOY_TARGET_DIR}"
+                  rsync -a --delete \
+                    --exclude=.git \
+                    --exclude=node_modules \
+                    --exclude=companio.db \
+                    --exclude='companio.db-*' \
+                    "${GITHUB_WORKSPACE}/" "${DEPLOY_TARGET_DIR}/"
+                  echo "Synced to ${DEPLOY_TARGET_DIR}"
+
+            - name: Install dependencies and typecheck
+              env:
+                  DEPLOY_TARGET_DIR: ${{ vars.DEPLOY_TARGET_DIR }}
+              run: |
+                  set -euo pipefail
+                  if [ -n "${DEPLOY_TARGET_DIR}" ]; then
+                    cd "${DEPLOY_TARGET_DIR}"
+                  fi
+                  bun install --frozen-lockfile
+                  bunx tsc --noEmit
+
+            - name: Restart application
+              env:
+                  DEPLOY_COMMAND: ${{ secrets.DEPLOY_COMMAND }}
+              run: |
+                  set -euo pipefail
+                  if [ -n "${DEPLOY_COMMAND:-}" ]; then
+                    echo "Running custom DEPLOY_COMMAND from secrets..."
+                    eval "$DEPLOY_COMMAND"
+                  else
+                    echo "Restarting systemd unit: companio"
+                    sudo systemctl restart companio
+                  fi
