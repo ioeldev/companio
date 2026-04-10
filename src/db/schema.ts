@@ -56,5 +56,15 @@ export function migrate(): void {
       payload     TEXT,
       createdAt   TEXT DEFAULT (datetime('now'))
     );
+
+    CREATE TABLE IF NOT EXISTS agent_sessions (
+      id          INTEGER PRIMARY KEY,
+      userId      TEXT NOT NULL,
+      platform    TEXT NOT NULL,
+      threadId    TEXT,
+      sessionId   TEXT NOT NULL,
+      updatedAt   TEXT DEFAULT (datetime('now')),
+      UNIQUE(userId, platform, threadId)
+    );
   `);
 }
