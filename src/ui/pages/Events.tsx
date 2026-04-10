@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { Badge } from "../components/Badge";
+import { PageHeader } from "../components/PageHeader";
+import { eventVariant } from "../lib/utils";
 
 interface Event {
   id: number;
@@ -8,15 +10,6 @@ interface Event {
   type: string;
   payload: string | null;
   createdAt: string;
-}
-
-type Variant = "default" | "success" | "error" | "info" | "warning";
-
-function eventVariant(type: string): Variant {
-  if (type === "error") return "error";
-  if (type === "task_fired") return "success";
-  if (type === "message") return "info";
-  return "default";
 }
 
 function prettyPayload(raw: string): string {
@@ -47,8 +40,7 @@ export function Events() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="text-xl font-bold">Events</h2>
+      <PageHeader title="Events">
         <div className="flex gap-1.5 flex-wrap">
           {types.map((t) => (
             <button
@@ -74,7 +66,7 @@ export function Events() {
           <option value="100">100</option>
           <option value="250">250</option>
         </select>
-      </div>
+      </PageHeader>
 
       <div className="space-y-1.5 max-h-[65vh] overflow-y-auto pr-1">
         {visible.length === 0 ? (

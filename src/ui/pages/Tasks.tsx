@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { Table, type Column } from "../components/Table";
 import { Badge } from "../components/Badge";
+import { Button } from "../components/Button";
+import { PageHeader } from "../components/PageHeader";
 
 interface Task {
   id: number;
@@ -82,27 +84,20 @@ export function Tasks() {
     {
       header: "",
       render: (t) => (
-        <button
-          onClick={() => handleDelete(t.id)}
-          className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-400/10 transition-colors"
-        >
+        <Button variant="danger" size="sm" onClick={() => handleDelete(t.id)}>
           Delete
-        </button>
+        </Button>
       ),
     },
   ];
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">Tasks</h2>
-        <button
-          onClick={load}
-          className="text-xs text-white/40 hover:text-white/60 transition-colors px-3 py-1 rounded hover:bg-white/5"
-        >
+      <PageHeader title="Tasks" className="justify-between">
+        <Button variant="ghost" size="sm" onClick={load}>
           Refresh
-        </button>
-      </div>
+        </Button>
+      </PageHeader>
       <Table columns={columns} rows={tasks} emptyMessage="No active tasks" />
     </div>
   );
