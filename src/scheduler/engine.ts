@@ -71,6 +71,21 @@ export function unregisterTask(id: number): void {
   }
 }
 
+/**
+ * Get list of all active cron jobs currently running in memory.
+ * Includes next fire time if available.
+ */
+export function getActiveJobs(): Array<{ id: number; nextFireTime: Date | null }> {
+  const jobs: Array<{ id: number; nextFireTime: Date | null }> = [];
+  for (const [id, job] of activeJobs) {
+    jobs.push({
+      id,
+      nextFireTime: job.nextRun(),
+    });
+  }
+  return jobs;
+}
+
 export function startScheduler(): void {
   const tasks = getActiveTasks();
   console.log(`⏰ Scheduler: loading ${tasks.length} task(s) from DB`);

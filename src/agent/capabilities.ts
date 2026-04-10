@@ -1,7 +1,7 @@
 import { createSdkMcpServer, tool } from "@anthropic-ai/claude-agent-sdk";
 import { z } from "zod";
 import { createTask, listTasks, deleteTask } from "../scheduler/index.ts";
-import { registerTask, unregisterTask } from "../scheduler/engine.ts";
+import { registerTask, unregisterTask, getActiveJobs } from "../scheduler/engine.ts";
 import { externalMcpServers } from "../mcp/servers.ts";
 import { db } from "../db/schema.ts";
 import { clearConversationHistory } from "../memory/conversations.ts";
@@ -84,6 +84,27 @@ const schedulerMcp = createSdkMcpServer({
                 unregisterTask(args.id);
                 deleteTask(args.id);
                 return { content: [{ type: "text" as const, text: `Task ${args.id} deleted.` }] };
+            }
+        ),
+        tool(
+            "check_active_crons",
+            "Diagnostic tool: see which cron jobs are currently running in the scheduler with their next fire times. Useful for debugging if tasks are scheduled but not firing.",
+            {},
+            async () => {
+                const jobs = getActiveJobs();
+                if (jobs.length === 0) {
+                    return { content: [{ type: "text" as const, text: "No active crons running." }] };
+                }
+                const now = new Date();
+                const text = jobs
+                    .map((j) => {
+                        const nextTime = j.nextFireTime;
+                        const timeStr = nextTime ? nextTime.toISOString() : "unknown";
+                        const timeUntil = nextTime ? Math.round((nextTime.getTime() - now.getTime()) / 1000) : 0;
+                        return `[Task ${j.id}] Next fire: ${timeStr} (in ${timeUntil}s)`;
+                    })
+                    .join("\n");
+                return { content: [{ type: "text" as const, text }] };
             }
         ),
     ],
@@ -207,7 +228,7 @@ export function getCapabilities(): CompanionCapabilities {
 
     const lines: string[] = [
         "**Memory** — long-term facts via set_memory / delete_memory; clear_conversation_history wipes the local chat transcript for this user/thread (not third-party apps).",
-        "**Scheduler** — one-shot or recurring user tasks via create_task, list_tasks, delete_task (message or agent mode).",
+        "**Scheduler** — one-shot or recurring user tasks via create_task, list_tasks, delete_task, check_active_crons (use check_active_crons to debug if tasks aren't firing).",
     ];
     if (slackEnabled) {
         lines.push("**Slack** — read channels and send messages via the Slack MCP tools.");
