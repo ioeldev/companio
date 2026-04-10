@@ -1,21 +1,21 @@
 {
-  "name": "companio",
-  "module": "src/index.ts",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "bun --watch src/index.ts",
-    "start": "bun src/index.ts",
-    "db:reset": "rm -f companio.db && bun src/index.ts"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "^5"
-  },
-  "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "^0.2.97",
-    "croner": "^10.0.1",
-    "grammy": "^1.42.0",
-    "zod": "^4.3.6"
-  }
+    "name": "companio",
+    "module": "src/index.ts",
+    "type": "module",
+    "private": true,
+    "scripts": {
+        "dev": "bun --watch src/index.ts",
+        "start": "bun src/index.ts",
+        "db:reset": "rm -f companio.db && bun src/index.ts"
+    },
+    "devDependencies": {
+        "@types/bun": "latest",
+        "typescript": "^5"
+    },
+    "dependencies": {
+        "@anthropic-ai/claude-agent-sdk": "^0.2.97",
+        "croner": "^10.0.1",
+        "grammy": "^1.42.0",
+        "zod": "^4.3.6"
+    }
 }

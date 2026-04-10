@@ -42,6 +42,20 @@ export function pruneOldConversations(): void {
   );
 }
 
+/** Deletes all stored messages for this user/thread (local SQLite only; not Slack/Telegram UI). */
+export function clearConversationHistory(
+  userId: string,
+  platform: string,
+  threadId: string | null
+): number {
+  const result = db.run(
+    `DELETE FROM conversations
+     WHERE userId = ? AND platform = ? AND (threadId = ? OR (threadId IS NULL AND ? IS NULL))`,
+    [userId, platform, threadId, threadId]
+  );
+  return result.changes;
+}
+
 export function countConversations(
   userId: string,
   platform: string,
