@@ -42,7 +42,7 @@ export function pruneOldConversations(): void {
   );
 }
 
-/** Deletes all stored messages for this user/thread (local SQLite only; not Slack/Telegram UI). */
+/** Deletes all stored messages and the SDK session for this user/thread (local SQLite only; not Slack/Telegram UI). */
 export function clearConversationHistory(
   userId: string,
   platform: string,
@@ -53,7 +53,40 @@ export function clearConversationHistory(
      WHERE userId = ? AND platform = ? AND (threadId = ? OR (threadId IS NULL AND ? IS NULL))`,
     [userId, platform, threadId, threadId]
   );
+  db.run(
+    `DELETE FROM agent_sessions
+     WHERE userId = ? AND platform = ? AND (threadId = ? OR (threadId IS NULL AND ? IS NULL))`,
+    [userId, platform, threadId, threadId]
+  );
   return result.changes;
+}
+
+export function getAgentSessionId(
+  userId: string,
+  platform: string,
+  threadId: string | null
+): string | null {
+  const row = db
+    .query<{ sessionId: string }, [string, string, string | null, string | null]>(
+      `SELECT sessionId FROM agent_sessions
+       WHERE userId = ? AND platform = ? AND (threadId = ? OR (threadId IS NULL AND ? IS NULL))`
+    )
+    .get(userId, platform, threadId, threadId);
+  return row?.sessionId ?? null;
+}
+
+export function saveAgentSessionId(
+  userId: string,
+  platform: string,
+  threadId: string | null,
+  sessionId: string
+): void {
+  db.run(
+    `INSERT INTO agent_sessions (userId, platform, threadId, sessionId, updatedAt)
+     VALUES (?, ?, ?, ?, datetime('now'))
+     ON CONFLICT(userId, platform, threadId) DO UPDATE SET sessionId = excluded.sessionId, updatedAt = excluded.updatedAt`,
+    [userId, platform, threadId, sessionId]
+  );
 }
 
 export function countConversations(

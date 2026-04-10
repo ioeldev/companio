@@ -5,11 +5,6 @@ interface MemoryRow {
   value: string;
 }
 
-interface ConversationRow {
-  role: string;
-  content: string;
-}
-
 /**
  * Builds platform-specific formatting instructions for the system prompt.
  * Claude will format its response appropriately for the target platform.
@@ -77,7 +72,6 @@ export interface IntegrationContext {
 export function buildSystemPrompt(
   task: AgentTask,
   memories: MemoryRow[],
-  recentTurns: ConversationRow[],
   integrations: IntegrationContext = {}
 ): string {
   const platformBlock = buildPlatformBlock(task);
@@ -85,13 +79,6 @@ export function buildSystemPrompt(
     memories.length > 0
       ? memories.map((m) => `- ${m.key}: ${m.value}`).join("\n")
       : "(no memories yet)";
-
-  const conversationBlock =
-    recentTurns.length > 0
-      ? recentTurns
-          .map((t) => `${t.role === "user" ? "User" : "Assistant"}: ${t.content}`)
-          .join("\n")
-      : "(no recent conversation)";
 
   const clickupBlock =
     integrations.clickupSpaceId
@@ -117,9 +104,6 @@ export function buildSystemPrompt(
 ${platformBlock}
 ## What you know about this user
 ${memoriesBlock}
-
-## Recent conversation
-${conversationBlock}
 ${capabilitiesBlock}${clickupBlock}${slackBlock}
 
 ## Behavior rules
