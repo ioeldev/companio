@@ -6,16 +6,24 @@
     "scripts": {
         "dev": "bun --watch src/index.ts",
         "start": "bun src/index.ts",
-        "db:reset": "rm -f companio.db && bun src/index.ts"
+        "db:reset": "rm -f companio.db && bun src/index.ts",
+        "build:ui": "bun run build.ts"
     },
     "devDependencies": {
         "@types/bun": "latest",
+        "@types/react": "^19.2.14",
+        "@types/react-dom": "^19.2.3",
         "typescript": "^5"
     },
     "dependencies": {
         "@anthropic-ai/claude-agent-sdk": "^0.2.97",
+        "bun-plugin-tailwind": "^0.1.2",
         "croner": "^10.0.1",
         "grammy": "^1.42.0",
+        "postcss": "^8.5.9",
+        "react": "^19.2.5",
+        "react-dom": "^19.2.5",
+        "tailwindcss": "^4.2.2",
         "zod": "^4.3.6"
     }
 }
