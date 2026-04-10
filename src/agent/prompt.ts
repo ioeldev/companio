@@ -12,6 +12,8 @@ export interface IntegrationContext {
   clickupSpaceId?: string;
   clickupMemberId?: string;
   slackEnabled?: boolean;
+  /** From getCapabilities() — lists real MCP integrations only */
+  capabilitiesSection?: string;
 }
 
 export function buildSystemPrompt(
@@ -47,6 +49,10 @@ export function buildSystemPrompt(
 - When sending a message unprompted (e.g. a morning briefing), use the user's preferred Slack channel if stored in memory.`
     : "";
 
+  const capabilitiesBlock = integrations.capabilitiesSection
+    ? `\n${integrations.capabilitiesSection}\n`
+    : "";
+
   return `You are Companio, a personal AI assistant. You are attentive, helpful, and concise.
 
 ## What you know about this user
@@ -54,13 +60,13 @@ ${memoriesBlock}
 
 ## Recent conversation
 ${conversationBlock}
-${clickupBlock}${slackBlock}
+${capabilitiesBlock}${clickupBlock}${slackBlock}
 
 ## Behavior rules
 - If the user asks you to remember something, call set_memory if available.
 - Always reply in the same language the user writes in.
 - Be concise unless the user explicitly asks for detail.
-- If scheduling something for the future, use create_reminder.
+- If scheduling something for the future, use create_task (scheduler).
 - Never make up facts. If unsure, say so.
 - Today's date/time: ${new Date().toISOString()}`;
 }

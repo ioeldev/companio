@@ -5,11 +5,11 @@ const dbPath = join(import.meta.dir, "../../companio.db");
 export const db = new Database(dbPath, { create: true });
 
 // Enable WAL mode for better concurrent access
-db.exec("PRAGMA journal_mode=WAL;");
-db.exec("PRAGMA foreign_keys=ON;");
+db.run("PRAGMA journal_mode=WAL;");
+db.run("PRAGMA foreign_keys=ON;");
 
 export function migrate(): void {
-  db.exec(`
+  db.run(`
     CREATE TABLE IF NOT EXISTS memories (
       id          INTEGER PRIMARY KEY,
       userId      TEXT NOT NULL,
