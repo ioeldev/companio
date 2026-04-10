@@ -38,6 +38,7 @@ export async function runCompanion(task: AgentTask): Promise<string> {
                 allowedTools: [...capabilities.allowedTools, ...getBuiltinAllowedToolNames()],
                 mcpServers: capabilities.mcpServers,
                 maxTurns: 10,
+                settingSources: ["project"],
                 ...(sessionId ? { resume: sessionId } : {}),
                 ...getBuiltinPermissionOptions(),
             },
