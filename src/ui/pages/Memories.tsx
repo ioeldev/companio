@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api";
+import { Button } from "../components/Button";
+import { Input } from "../components/Input";
+import { PageHeader } from "../components/PageHeader";
 
 interface Memory {
   id: number;
@@ -47,15 +50,14 @@ export function Memories() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3 flex-wrap">
-        <h2 className="text-xl font-bold">Memories</h2>
-        <input
+      <PageHeader title="Memories">
+        <Input
           value={filterUserId}
           onChange={(e) => setFilterUserId(e.target.value)}
           placeholder="Filter by user ID…"
-          className="max-w-xs bg-white/5 border border-white/10 rounded px-3 py-1.5 text-sm outline-none focus:border-white/30 transition-colors placeholder:text-white/20"
+          className="max-w-xs"
         />
-      </div>
+      </PageHeader>
 
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
@@ -118,19 +120,13 @@ export function Memories() {
                 <td className="py-2.5 px-3">
                   <div className="flex items-center gap-1.5">
                     {editingId === m.id && (
-                      <button
-                        onClick={() => saveEdit(m)}
-                        className="text-green-400 hover:text-green-300 text-xs px-2 py-1 rounded hover:bg-green-400/10 transition-colors"
-                      >
+                      <Button variant="success" size="sm" onClick={() => saveEdit(m)}>
                         Save
-                      </button>
+                      </Button>
                     )}
-                    <button
-                      onClick={() => handleDelete(m)}
-                      className="text-red-400 hover:text-red-300 text-xs px-2 py-1 rounded hover:bg-red-400/10 transition-colors"
-                    >
+                    <Button variant="danger" size="sm" onClick={() => handleDelete(m)}>
                       Delete
-                    </button>
+                    </Button>
                   </div>
                 </td>
               </tr>

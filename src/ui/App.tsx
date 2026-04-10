@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { SidebarNav, BottomNav, type NavItem } from "./components/NavBar";
+import { Button } from "./components/Button";
 import { Overview } from "./pages/Overview";
 import { Tasks } from "./pages/Tasks";
 import { Memories } from "./pages/Memories";
@@ -147,12 +148,9 @@ export function App() {
             <div className="space-y-4">
               <div className="flex items-center gap-4">
                 <h2 className="text-xl font-bold">API Tester</h2>
-                <button
-                  onClick={() => setShowApiTester(false)}
-                  className="text-white/40 text-sm hover:text-white/60 transition-colors"
-                >
+                <Button variant="ghost" size="md" onClick={() => setShowApiTester(false)}>
                   ✕ Close
-                </button>
+                </Button>
               </div>
               <APITester />
             </div>

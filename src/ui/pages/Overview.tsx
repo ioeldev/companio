@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { api } from "../lib/api";
 import { Card } from "../components/Card";
 import { Badge } from "../components/Badge";
+import { PageHeader } from "../components/PageHeader";
+import { eventVariant } from "../lib/utils";
 
 interface Status {
   uptime: number;
@@ -35,13 +37,6 @@ function formatBytes(b: number): string {
   return `${(b / 1024 / 1024).toFixed(2)} MB`;
 }
 
-function eventVariant(type: string): "default" | "success" | "error" | "info" | "warning" {
-  if (type === "error") return "error";
-  if (type === "task_fired") return "success";
-  if (type === "message") return "info";
-  return "default";
-}
-
 export function Overview() {
   const [status, setStatus] = useState<Status | null>(null);
   const [events, setEvents] = useState<Event[]>([]);
@@ -57,7 +52,7 @@ export function Overview() {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">Overview</h2>
+      <PageHeader title="Overview" />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card title="Uptime">

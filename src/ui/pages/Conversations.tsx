@@ -1,5 +1,8 @@
 import { useState } from "react";
 import { api } from "../lib/api";
+import { Button } from "../components/Button";
+import { Input } from "../components/Input";
+import { PageHeader } from "../components/PageHeader";
 
 interface Turn {
   id: number;
@@ -38,37 +41,33 @@ export function Conversations() {
 
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-bold">Conversations</h2>
+      <PageHeader title="Conversations" />
 
       <div className="flex gap-2 flex-wrap">
-        <input
+        <Input
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
           onKeyDown={handleKey}
           placeholder="User ID"
-          className="bg-white/5 border border-white/10 rounded px-3 py-1.5 text-sm outline-none focus:border-white/30 transition-colors placeholder:text-white/20 w-36"
+          className="w-36"
         />
-        <input
+        <Input
           value={platform}
           onChange={(e) => setPlatform(e.target.value)}
           onKeyDown={handleKey}
           placeholder="Platform"
-          className="bg-white/5 border border-white/10 rounded px-3 py-1.5 text-sm outline-none focus:border-white/30 transition-colors placeholder:text-white/20 w-28"
+          className="w-28"
         />
-        <input
+        <Input
           value={threadId}
           onChange={(e) => setThreadId(e.target.value)}
           onKeyDown={handleKey}
           placeholder="Thread ID"
-          className="bg-white/5 border border-white/10 rounded px-3 py-1.5 text-sm outline-none focus:border-white/30 transition-colors placeholder:text-white/20 w-36"
+          className="w-36"
         />
-        <button
-          onClick={search}
-          disabled={loading}
-          className="bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white/80 px-4 py-1.5 rounded text-sm transition-colors"
-        >
+        <Button variant="default" size="md" onClick={search} disabled={loading}>
           {loading ? "…" : "Search"}
-        </button>
+        </Button>
       </div>
 
       {turns.length === 0 ? (
