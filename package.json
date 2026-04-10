@@ -6,8 +6,7 @@
     "scripts": {
         "dev": "bun --watch src/index.ts",
         "start": "bun src/index.ts",
-        "db:reset": "rm -f companio.db && bun src/index.ts",
-        "build:ui": "bun run build.ts"
+        "db:reset": "rm -f companio.db && bun src/index.ts"
     },
     "devDependencies": {
         "@types/bun": "latest",
