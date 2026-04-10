@@ -143,20 +143,22 @@ export function App() {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 min-h-0 overflow-y-auto px-4 pt-4 pb-24 md:px-6 md:pt-6 md:pb-6">
-          {showApiTester ? (
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                <h2 className="text-xl font-bold">API Tester</h2>
-                <Button variant="ghost" size="md" onClick={() => setShowApiTester(false)}>
-                  ✕ Close
-                </Button>
+        <main className="flex-1 min-h-0 overflow-y-auto">
+          <div className="px-4 pt-4 pb-24 md:px-6 md:pt-6 md:pb-6">
+            {showApiTester ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-4">
+                  <h2 className="text-xl font-bold">API Tester</h2>
+                  <Button variant="ghost" size="md" onClick={() => setShowApiTester(false)}>
+                    ✕ Close
+                  </Button>
+                </div>
+                <APITester />
               </div>
-              <APITester />
-            </div>
-          ) : (
-            <CurrentPage />
-          )}
+            ) : (
+              <CurrentPage />
+            )}
+          </div>
         </main>
       </div>
 
