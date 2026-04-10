@@ -12,7 +12,7 @@ export async function runCompanion(task: AgentTask): Promise<string> {
     const memories = getMemories(task.userId);
     const recentTurns = getRecentConversations(task.userId, task.platform, task.threadId ?? null);
 
-    const systemPrompt = buildSystemPrompt(memories, recentTurns, {
+    const systemPrompt = buildSystemPrompt(task, memories, recentTurns, {
         clickupSpaceId: process.env.CLICKUP_SPACE_ID,
         clickupMemberId: process.env.CLICKUP_MEMBER_ID,
         slackEnabled: capabilities.slackEnabled,

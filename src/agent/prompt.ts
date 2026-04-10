@@ -1,3 +1,5 @@
+import type { AgentTask } from "./types.ts";
+
 interface MemoryRow {
   key: string;
   value: string;
@@ -17,10 +19,19 @@ export interface IntegrationContext {
 }
 
 export function buildSystemPrompt(
+  task: AgentTask,
   memories: MemoryRow[],
   recentTurns: ConversationRow[],
   integrations: IntegrationContext = {}
 ): string {
+  const platformBlock = `
+## Current Context
+- **Platform**: ${task.platform}
+- **Trigger**: ${task.trigger}
+- **User ID**: ${task.userId}
+- **Channel/Chat ID**: ${task.channelId}
+${task.threadId ? `- **Thread ID**: ${task.threadId}` : ""}
+`;
   const memoriesBlock =
     memories.length > 0
       ? memories.map((m) => `- ${m.key}: ${m.value}`).join("\n")
@@ -54,7 +65,7 @@ export function buildSystemPrompt(
     : "";
 
   return `You are Companio, a personal AI assistant. You are attentive, helpful, and concise.
-
+${platformBlock}
 ## What you know about this user
 ${memoriesBlock}
 
