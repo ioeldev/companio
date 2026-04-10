@@ -47,33 +47,23 @@ jobs:
               with:
                   bun-version: latest
 
-            - name: Sync to production directory (optional)
-              env:
-                  DEPLOY_TARGET_DIR: ${{ vars.DEPLOY_TARGET_DIR }}
+            - name: Sync to production directory
               run: |
                   set -euo pipefail
-                  if [ -z "${DEPLOY_TARGET_DIR}" ]; then
-                    echo "DEPLOY_TARGET_DIR not set; using workspace as app root."
-                    exit 0
-                  fi
-                  mkdir -p "${DEPLOY_TARGET_DIR}"
+                  mkdir -p /home/seed/companio
                   rsync -a --delete \
                     --exclude=.git \
                     --exclude=node_modules \
                     --exclude=.env \
                     --exclude=companio.db \
                     --exclude='companio.db-*' \
-                    "${GITHUB_WORKSPACE}/" "${DEPLOY_TARGET_DIR}/"
-                  echo "Synced to ${DEPLOY_TARGET_DIR}"
+                    "${GITHUB_WORKSPACE}/" /home/seed/companio/
+                  echo "Synced to /home/seed/companio"
 
             - name: Install dependencies and typecheck
-              env:
-                  DEPLOY_TARGET_DIR: ${{ vars.DEPLOY_TARGET_DIR }}
               run: |
                   set -euo pipefail
-                  if [ -n "${DEPLOY_TARGET_DIR}" ]; then
-                    cd "${DEPLOY_TARGET_DIR}"
-                  fi
+                  cd /home/seed/companio
                   bun install --frozen-lockfile
                   bunx tsc --noEmit
 
