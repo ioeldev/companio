@@ -18,14 +18,13 @@ function isRateLimited(userId: string): boolean {
 
 class TelegramPlatform implements Platform {
   readonly name = "telegram";
+  get configured(): boolean {
+    return !!process.env.TELEGRAM_BOT_TOKEN;
+  }
   private bot: Bot | null = null;
 
   start(): void {
-    const token = process.env.TELEGRAM_BOT_TOKEN;
-    if (!token) {
-      console.warn("TELEGRAM_BOT_TOKEN not set, skipping Telegram");
-      return;
-    }
+    const token = process.env.TELEGRAM_BOT_TOKEN!;
 
     const bot = new Bot(token);
     this.bot = bot;

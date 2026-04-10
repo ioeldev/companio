@@ -32,14 +32,13 @@ function splitMessage(text: string): string[] {
 
 class DiscordPlatform implements Platform {
   readonly name = "discord";
+  get configured(): boolean {
+    return !!process.env.DISCORD_BOT_TOKEN;
+  }
   private client: Client | null = null;
 
   start(): void {
-    const token = process.env.DISCORD_BOT_TOKEN;
-    if (!token) {
-      console.warn("DISCORD_BOT_TOKEN not set, skipping Discord");
-      return;
-    }
+    const token = process.env.DISCORD_BOT_TOKEN!;
 
     const ownerId = process.env.DISCORD_OWNER_ID;
 
