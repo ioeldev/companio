@@ -1,9 +1,9 @@
-import { query } from "@anthropic-ai/claude-agent-sdk";
+import { generateText, stepCountIs } from "ai";
 import { getMemories } from "../memory/index.ts";
-import { saveConversation, getAgentSessionId, saveAgentSessionId } from "../memory/conversations.ts";
+import { saveConversation, getContextMessages } from "../memory/conversations.ts";
 import { buildSystemPrompt } from "./prompt.ts";
 import { getCapabilities } from "./capabilities.ts";
-import { getBuiltinAllowedToolNames, getBuiltinPermissionOptions, getBuiltinTools } from "./builtin-tools.ts";
+import { resolveModel } from "./model.ts";
 import { db } from "../db/schema.ts";
 import type { AgentTask } from "./types.ts";
 
@@ -25,47 +25,19 @@ export async function runCompanion(task: AgentTask): Promise<string> {
         JSON.stringify({ platform: task.platform, trigger: task.trigger }),
     ]);
 
-    const existingSessionId = getAgentSessionId(task.userId, task.platform, task.threadId ?? null);
+    const contextMessages = getContextMessages(task.userId, task.platform, task.threadId ?? null);
 
-    let result = "";
-
-    const runQuery = async (sessionId: string | null) => {
-        for await (const message of query({
-            prompt: task.message,
-            options: {
-                systemPrompt,
-                tools: getBuiltinTools(),
-                allowedTools: [...capabilities.allowedTools, ...getBuiltinAllowedToolNames()],
-                mcpServers: capabilities.mcpServers,
-                maxTurns: 10,
-                settingSources: ["project"],
-                ...(sessionId ? { resume: sessionId } : {}),
-                ...getBuiltinPermissionOptions(),
-            },
-        })) {
-            if (message.type === "result") {
-                if (message.session_id) {
-                    saveAgentSessionId(task.userId, task.platform, task.threadId ?? null, message.session_id);
-                }
-                if (message.subtype === "success") {
-                    result = message.result;
-                }
-            }
-        }
-    };
+    let resultText = "";
 
     try {
-        try {
-            await runQuery(existingSessionId);
-        } catch (err) {
-            const msg = err instanceof Error ? err.message : String(err);
-            // If the stored session file is gone, retry as a fresh session
-            if (existingSessionId && (msg.includes("session") || msg.includes("not found") || msg.includes("ENOENT"))) {
-                await runQuery(null);
-            } else {
-                throw err;
-            }
-        }
+        const result = await generateText({
+            model: resolveModel(),
+            system: systemPrompt,
+            messages: contextMessages,
+            tools: capabilities.tools,
+            stopWhen: stepCountIs(10),
+        });
+        resultText = result.text?.trim() ?? "";
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
         db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'error', ?)`, [
@@ -75,13 +47,13 @@ export async function runCompanion(task: AgentTask): Promise<string> {
         throw err;
     }
 
-    if (result) {
-        saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", result);
+    if (resultText) {
+        saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", resultText);
         db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'message_sent', ?)`, [
             task.userId,
-            JSON.stringify({ platform: task.platform, length: result.length }),
+            JSON.stringify({ platform: task.platform, length: resultText.length }),
         ]);
     }
 
-    return result || "I'm here. What can I help you with?";
+    return resultText || "I'm here. What can I help you with?";
 }
