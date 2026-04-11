@@ -1,33 +1,19 @@
-import { tool, createSdkMcpServer } from "@anthropic-ai/claude-agent-sdk";
+import { tool } from "ai";
 import { z } from "zod";
 
-// Define a tool: name, description, input schema, handler
-const getTemperature = tool(
-    "get_temperature",
-    "Get the current temperature at a location",
-    {
-        latitude: z.number().describe("Latitude coordinate"), // .describe() adds a field description Claude sees
+/** Example AI SDK tool (not wired into Companio by default). */
+export const getTemperatureTool = tool({
+    description: "Get the current temperature at a location",
+    inputSchema: z.object({
+        latitude: z.number().describe("Latitude coordinate"),
         longitude: z.number().describe("Longitude coordinate"),
-    },
-    async (args) => {
-        // args is typed from the schema: { latitude: number; longitude: number }
+    }),
+    execute: async (args) => {
         const response = await fetch(
             `https://api.open-meteo.com/v1/forecast?latitude=${args.latitude}&longitude=${args.longitude}&current=temperature_2m&temperature_unit=fahrenheit`
         );
-        const data: any = await response.json();
-
-        // Return a content array - Claude sees this as the tool result
-        return {
-            content: [{ type: "text", text: `Temperature: ${data.current.temperature_2m}°F` }],
-        };
-    }
-);
-
-// Wrap the tool in an in-process MCP server
-const weatherServer = createSdkMcpServer({
-    name: "weather",
-    version: "1.0.0",
-    tools: [getTemperature],
+        const data: { current?: { temperature_2m?: number } } = await response.json();
+        const temp = data.current?.temperature_2m;
+        return `Temperature: ${temp ?? "unknown"}°F`;
+    },
 });
-
-export default weatherServer;

@@ -65,7 +65,7 @@ export interface IntegrationContext {
   clickupSpaceId?: string;
   clickupMemberId?: string;
   slackEnabled?: boolean;
-  /** From getCapabilities() — lists real MCP integrations only */
+  /** From initCapabilities() / getCapabilities() — lists real integrations only */
   capabilitiesSection?: string;
 }
 
