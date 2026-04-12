@@ -19,6 +19,7 @@
         "@ai-sdk/mcp": "^1.0.36",
         "@ai-sdk/xai": "^3.0.82",
         "ai": "^6.0.158",
+        "ai-sdk-provider-claude-code": "^3.4.4",
         "bun-plugin-tailwind": "^0.1.2",
         "croner": "^10.0.1",
         "discord.js": "^14.26.2",
