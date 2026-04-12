@@ -34,8 +34,7 @@ export function resolveModel(): LanguageModel {
 
     const apiKey =
         process.env.ANTHROPIC_API_KEY?.trim() ||
-        process.env.ANTHROPIC_AUTH_TOKEN?.trim() ||
-        process.env.CLAUDE_CODE_OAUTH_TOKEN?.trim();
+        process.env.ANTHROPIC_AUTH_TOKEN?.trim();
     if (!apiKey) {
         throw new Error(
             "ANTHROPIC_API_KEY (or ANTHROPIC_AUTH_TOKEN) is required when LLM_PROVIDER=anthropic"
