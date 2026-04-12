@@ -7,7 +7,7 @@ export interface ExternalMcpStdioConfig {
 
 export const externalMcpServers: Record<string, ExternalMcpStdioConfig> = {
     slack: {
-        command: "npx",
+        command: "bunx",
         args: ["-y", "@modelcontextprotocol/server-slack"],
         env: {
             SLACK_BOT_TOKEN: process.env.SLACK_BOT_TOKEN ?? "",
@@ -15,14 +15,14 @@ export const externalMcpServers: Record<string, ExternalMcpStdioConfig> = {
         },
     },
     clickup: {
-        command: "npx",
+        command: "bunx",
         args: ["-y", "mcp-remote", "https://mcp.clickup.com/mcp"],
         env: {
             CLICKUP_API_KEY: process.env.CLICKUP_API_KEY ?? "",
         },
     },
     github: {
-        command: "npx",
+        command: "bunx",
         args: ["-y", "@modelcontextprotocol/server-github"],
         env: {
             GITHUB_PERSONAL_ACCESS_TOKEN:

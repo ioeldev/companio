@@ -145,8 +145,10 @@ claude auth login
 
 ```env
 LLM_PROVIDER=claude-code
-LLM_MODEL=sonnet   # or opus / haiku
+LLM_MODEL=sonnet
 ```
+
+Valid values for `LLM_MODEL` with this provider: `sonnet`, `opus`, `haiku`.
 
 3. Run `bun install` to pull in `ai-sdk-provider-claude-code`.
 
