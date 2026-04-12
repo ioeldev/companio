@@ -89,48 +89,6 @@ export function Overview() {
                                 </time>
                             </div>
                         ))}
-                        {events.map((ev) => (
-                            <div key={ev.id} className="flex items-start gap-3 bg-white/5 rounded-lg px-4 py-3">
-                                <Badge variant={eventVariant(ev.type)}>{ev.type}</Badge>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-white/50 text-xs font-mono truncate">{ev.userId}</p>
-                                    {ev.payload && (
-                                        <p className="text-white/30 text-xs font-mono mt-0.5 truncate">{ev.payload}</p>
-                                    )}
-                                </div>
-                                <time className="text-white/30 text-xs shrink-0">
-                                    {new Date(ev.createdAt).toLocaleTimeString()}
-                                </time>
-                            </div>
-                        ))}
-                        {events.map((ev) => (
-                            <div key={ev.id} className="flex items-start gap-3 bg-white/5 rounded-lg px-4 py-3">
-                                <Badge variant={eventVariant(ev.type)}>{ev.type}</Badge>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-white/50 text-xs font-mono truncate">{ev.userId}</p>
-                                    {ev.payload && (
-                                        <p className="text-white/30 text-xs font-mono mt-0.5 truncate">{ev.payload}</p>
-                                    )}
-                                </div>
-                                <time className="text-white/30 text-xs shrink-0">
-                                    {new Date(ev.createdAt).toLocaleTimeString()}
-                                </time>
-                            </div>
-                        ))}
-                        {events.map((ev) => (
-                            <div key={ev.id} className="flex items-start gap-3 bg-white/5 rounded-lg px-4 py-3">
-                                <Badge variant={eventVariant(ev.type)}>{ev.type}</Badge>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-white/50 text-xs font-mono truncate">{ev.userId}</p>
-                                    {ev.payload && (
-                                        <p className="text-white/30 text-xs font-mono mt-0.5 truncate">{ev.payload}</p>
-                                    )}
-                                </div>
-                                <time className="text-white/30 text-xs shrink-0">
-                                    {new Date(ev.createdAt).toLocaleTimeString()}
-                                </time>
-                            </div>
-                        ))}
                     </div>
                 )}
             </div>
