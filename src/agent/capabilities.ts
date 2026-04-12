@@ -169,7 +169,8 @@ async function connectExternalMcp(
         const remoteTools = await client.tools();
         return { tools: prefixToolKeys(name, remoteTools as ToolSet), client };
     } catch (err) {
-        console.error(`[companio] MCP server "${name}" failed to start:`, err);
+        const msg = err instanceof Error ? err.message : String(err);
+        console.error(`[companio] MCP server "${name}" failed to start: ${msg}`);
         return null;
     }
 }
