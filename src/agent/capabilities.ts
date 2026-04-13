@@ -149,9 +149,7 @@ function buildMemoryTools(): ToolSet {
 }
 
 function prefixToolKeys(prefix: string, tools: ToolSet): ToolSet {
-    return Object.fromEntries(
-        Object.entries(tools).map(([name, t]) => [`${prefix}__${name}`, t])
-    ) as ToolSet;
+    return Object.fromEntries(Object.entries(tools).map(([name, t]) => [`${prefix}__${name}`, t])) as ToolSet;
 }
 
 async function connectExternalMcp(
@@ -216,6 +214,7 @@ async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
         }
     }
     if (clickupEnabled) {
+        console.log("Connecting to ClickUp MCP server");
         const conn = await connectExternalMcp("clickup", externalMcpServers.clickup!);
         if (conn) {
             Object.assign(tools, conn.tools);
@@ -246,9 +245,7 @@ async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
         );
     }
     if (sqlToolEnabled) {
-        lines.push(
-            "**run_sql** — query the local Companio SQLite DB; read-only unless COMPANIO_SQL_WRITE=true."
-        );
+        lines.push("**run_sql** — query the local Companio SQLite DB; read-only unless COMPANIO_SQL_WRITE=true.");
     }
 
     const capabilitiesPromptSection = `## Available tools in this deployment
