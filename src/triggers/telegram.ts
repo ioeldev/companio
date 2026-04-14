@@ -25,6 +25,7 @@ class TelegramPlatform implements Platform {
 
   start(): void {
     const token = process.env.TELEGRAM_BOT_TOKEN!;
+    const ownerId = process.env.TELEGRAM_OWNER_ID?.trim();
 
     const bot = new Bot(token);
     this.bot = bot;
@@ -33,6 +34,9 @@ class TelegramPlatform implements Platform {
       const userId = String(ctx.from?.id ?? "unknown");
       const chatId = String(ctx.chat.id);
       const text = ctx.message.text;
+
+      // Restrict to owner when TELEGRAM_OWNER_ID is set (your numeric Telegram user id)
+      if (ownerId && userId !== ownerId) return;
 
       if (isRateLimited(userId)) {
         await ctx.reply("Slow down, I'm thinking.");

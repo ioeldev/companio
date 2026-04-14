@@ -1,4 +1,5 @@
 import type { AgentTask } from "./types.ts";
+import { buildCavemanBlock, memoriesWithoutCavemanKey, resolveCavemanLevel } from "./caveman.ts";
 
 interface MemoryRow {
     key: string;
@@ -76,8 +77,11 @@ export function buildSystemPrompt(
     integrations: IntegrationContext = {}
 ): string {
     const platformBlock = buildPlatformBlock(task);
+    const memoriesForDisplay = memoriesWithoutCavemanKey(memories);
     const memoriesBlock =
-        memories.length > 0 ? memories.map((m) => `- ${m.key}: ${m.value}`).join("\n") : "(no memories yet)";
+        memoriesForDisplay.length > 0
+            ? memoriesForDisplay.map((m) => `- ${m.key}: ${m.value}`).join("\n")
+            : "(no memories yet)";
 
     const clickupBlock = integrations.clickupFolderId
         ? `
@@ -97,13 +101,17 @@ export function buildSystemPrompt(
 
     const capabilitiesBlock = integrations.capabilitiesSection ? `\n${integrations.capabilitiesSection}\n` : "";
 
+    const cavemanLevel = resolveCavemanLevel(memories);
+    const cavemanBlock = cavemanLevel ? buildCavemanBlock(cavemanLevel) : "";
+
     return `You are Companio, a personal AI assistant. You are attentive, helpful, and concise.
-${platformBlock}
+${cavemanBlock}${platformBlock}
 ## What you know about this user
 ${memoriesBlock}
 ${capabilitiesBlock}${clickupBlock}${slackBlock}
 
 ## Behavior rules
+- User can change caveman voice without you: first line \`/caveman lite|full|ultra|...\`, \`stop caveman\`, \`caveman reset\` (handled before you run). If they ask you to change voice, tell them those commands.
 - You run inside Companio's server: integrations (e.g. Slack) are already authorized via env. When the user asks you to use a tool, **call it** — never ask them to "grant permission", "allow MCP access", or approve anything in an IDE; that does not apply here.
 - If the user asks you to remember something, call set_memory if available.
 - If they ask to clear this chat, forget the conversation, or prune stored messages (not Slack/Telegram UI), call clear_conversation_history with their userId, platform, and threadId when applicable.

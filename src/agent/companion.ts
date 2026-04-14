@@ -6,9 +6,29 @@ import { getCapabilities } from "./capabilities.ts";
 import { resolveModel } from "./model.ts";
 import { db } from "../db/schema.ts";
 import type { AgentTask } from "./types.ts";
+import { processCavemanUserCommand } from "./caveman.ts";
 
 export async function runCompanion(task: AgentTask): Promise<string> {
     const capabilities = getCapabilities();
+
+    const cave = processCavemanUserCommand(task.userId, task.message);
+    if (cave.earlyReply !== undefined) {
+        saveConversation(task.userId, task.platform, task.threadId ?? null, "user", task.message.trim());
+        saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", cave.earlyReply);
+        db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'message_received', ?)`, [
+            task.userId,
+            JSON.stringify({ platform: task.platform, trigger: task.trigger, cavemanCommand: true }),
+        ]);
+        db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'message_sent', ?)`, [
+            task.userId,
+            JSON.stringify({ platform: task.platform, cavemanCommand: true }),
+        ]);
+        return cave.earlyReply;
+    }
+
+    const userMessageForTurn =
+        cave.textForModel !== task.message ? cave.textForModel.trim() || task.message.trim() : task.message.trim();
+
     const memories = getMemories(task.userId);
 
     const systemPrompt = buildSystemPrompt(task, memories, {
@@ -18,7 +38,7 @@ export async function runCompanion(task: AgentTask): Promise<string> {
         capabilitiesSection: capabilities.capabilitiesPromptSection,
     });
 
-    saveConversation(task.userId, task.platform, task.threadId ?? null, "user", task.message);
+    saveConversation(task.userId, task.platform, task.threadId ?? null, "user", userMessageForTurn);
 
     db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'message_received', ?)`, [
         task.userId,
