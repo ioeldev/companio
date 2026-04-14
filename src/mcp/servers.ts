@@ -16,10 +16,13 @@ export const externalMcpServers: Record<string, ExternalMcpStdioConfig> = {
     },
     clickup: {
         command: "bunx",
-        args: ["-y", "mcp-remote", "https://mcp.clickup.com/mcp"],
-        env: {
-            CLICKUP_API_KEY: process.env.CLICKUP_API_KEY ?? "",
-        },
+        args: [
+            "-y",
+            "mcp-remote",
+            "https://mcp.clickup.com/mcp",
+            "--header",
+            `Authorization: Bearer ${process.env.CLICKUP_API_KEY ?? ""}`,
+        ],
     },
     github: {
         command: "bunx",
