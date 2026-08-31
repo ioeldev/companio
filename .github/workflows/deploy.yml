@@ -1,98 +1,82 @@
-# Deploy Companio on a VPS with a self-hosted GitHub Actions runner.
-#
-# Setup:
-# - Register the runner on this repo (Settings → Actions → Runners).
-# - Put runtime secrets in a server-side `.env` (not in git), e.g. next to the app or via systemd EnvironmentFile.
-# - Run the bot under systemd/pm2 with WorkingDirectory pointing at the same directory you deploy to.
-#
-# Variables (DEPLOY_TARGET_DIR, SYSTEMD_*, etc.):
-# - Either: Repository variables — Settings → Secrets and variables → Actions → Variables (repository).
-# - Or: Environment variables — Settings → Environments → production (or your env name). Those are only
-#   visible to jobs that declare `environment:` below. Change `production` to match your environment name.
-#
-# Optional Variables:
-# - DEPLOY_TARGET_DIR — e.g. /home/seed/companio. Rsyncs the repo there (excludes .git, node_modules, .env,
-#   companio.db*), then install/typecheck in that directory.
-# - SYSTEMD_SCOPE — `system` (default) or `user` (no sudo; use user unit + loginctl enable-linger).
-# - SYSTEMD_UNIT — default companio.
-#
-# Optional Secrets (repository or same Environment):
-# - DEPLOY_COMMAND — overrides systemctl restart (e.g. pm2 restart companio).
-#
-# Restart: CI has no TTY — use SYSTEMD_SCOPE=user, or NOPASSWD sudo for systemctl, or DEPLOY_COMMAND.
-
-name: Deploy
+name: Build & Deploy
 
 on:
-    push:
-        branches:
-            - main
-    workflow_dispatch:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
 
 concurrency:
-    group: deploy-${{ github.workflow }}-${{ github.ref }}
-    cancel-in-progress: true
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
-    deploy:
-        runs-on: self-hosted
-        environment: production
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - run: bun install --frozen-lockfile
+      - run: bunx tsc --noEmit
 
-        steps:
-            - name: Checkout
-              uses: actions/checkout@v4
+  build-and-push:
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image-tag: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=sha,format=long
+            type=raw,value=latest
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
 
-            - name: Setup Bun
-              uses: oven-sh/setup-bun@v2
-              with:
-                  bun-version: latest
-
-            - name: Sync to production directory
-              run: |
-                  set -euo pipefail
-                  mkdir -p /home/seed/companio
-                  rsync -a --delete \
-                    --exclude=.git \
-                    --exclude=node_modules \
-                    --exclude=.env \
-                    --exclude=companio.db \
-                    --exclude='companio.db-*' \
-                    "${GITHUB_WORKSPACE}/" /home/seed/companio/
-                  echo "Synced to /home/seed/companio"
-
-            - name: Install dependencies and typecheck
-              run: |
-                  set -euo pipefail
-                  cd /home/seed/companio
-                  bun install --frozen-lockfile
-                  bunx tsc --noEmit
-
-            - name: Restart application
-              env:
-                  DEPLOY_COMMAND: ${{ secrets.DEPLOY_COMMAND }}
-                  SYSTEMD_UNIT: ${{ vars.SYSTEMD_UNIT }}
-                  SYSTEMD_SCOPE: ${{ vars.SYSTEMD_SCOPE }}
-              run: |
-                  set -euo pipefail
-                  UNIT="${SYSTEMD_UNIT:-companio}"
-                  SCOPE="${SYSTEMD_SCOPE:-system}"
-
-                  if [ -n "${DEPLOY_COMMAND:-}" ]; then
-                    echo "Running custom DEPLOY_COMMAND from secrets..."
-                    eval "$DEPLOY_COMMAND"
-                    exit 0
-                  fi
-
-                  if [ "${SCOPE}" = "user" ]; then
-                    echo "Restarting user systemd unit: ${UNIT}"
-                    systemctl --user restart "${UNIT}"
-                    exit 0
-                  fi
-
-                  echo "Restarting system systemd unit: ${UNIT} (non-interactive sudo -n)"
-                  if sudo -n systemctl restart "${UNIT}"; then
-                    exit 0
-                  fi
-                  echo "::error::sudo -n systemctl restart failed (no password prompt in CI)."
-                  echo "Fix: set variable SYSTEMD_SCOPE=user, or NOPASSWD for this runner user, or secret DEPLOY_COMMAND."
-                  exit 1
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ vars.VPS_PORT || 9143 }}
+          source: docker-compose.prod.yml
+          target: ~/apps/companio
+          overwrite: true
+      - uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ vars.VPS_PORT || 9143 }}
+          script: |
+            set -eu
+            echo "${{ secrets.GHCR_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+            mkdir -p ~/apps/companio
+            cd ~/apps/companio
+            IMAGE="ghcr.io/${{ github.repository }}:sha-${{ github.sha }}" docker compose -f docker-compose.prod.yml pull companio
+            IMAGE="ghcr.io/${{ github.repository }}:sha-${{ github.sha }}" docker compose -f docker-compose.prod.yml up -d --remove-orphans

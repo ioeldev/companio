@@ -1,0 +1,8 @@
+services:
+  companio:
+    image: ${IMAGE:?Set IMAGE to the GHCR image tag to deploy}
+    restart: unless-stopped
+    env_file:
+      - .env
+    ports:
+      - "${DASHBOARD_PORT:-7777}:7777"

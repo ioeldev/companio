@@ -5,7 +5,7 @@ import { PageHeader } from "../components/PageHeader";
 import { eventVariant } from "../lib/utils";
 
 interface Event {
-  id: number;
+  id: string;
   userId: string;
   type: string;
   payload: string | null;

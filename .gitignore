@@ -33,7 +33,7 @@ report.[0-9]_.[0-9]_.[0-9]_.[0-9]_.json
 # Finder (MacOS) folder config
 .DS_Store
 
-# SQLite database
+# Local SQLite files from earlier versions
 companio.db
 companio.db-wal
 companio.db-shm

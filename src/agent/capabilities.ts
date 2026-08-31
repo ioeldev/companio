@@ -5,9 +5,8 @@ import { z } from "zod";
 import { createTask, listTasks, deleteTask } from "../scheduler/index.ts";
 import { registerTask, unregisterTask, getActiveJobs } from "../scheduler/engine.ts";
 import { externalMcpServers, type ExternalMcpStdioConfig } from "../mcp/servers.ts";
-import { db } from "../db/schema.ts";
+import { setMemory, deleteMemory } from "../memory/index.ts";
 import { clearConversationHistory } from "../memory/conversations.ts";
-import { getCompanioSqliteTools } from "./companio-sqlite-mcp.ts";
 
 function buildSchedulerTools(): ToolSet {
     return {
@@ -28,7 +27,7 @@ function buildSchedulerTools(): ToolSet {
                 channelId: z.string().describe("Channel or chat ID to deliver to"),
             }),
             execute: async (args) => {
-                const task = createTask(
+                const task = await createTask(
                     args.userId,
                     args.label,
                     args.prompt,
@@ -50,7 +49,7 @@ function buildSchedulerTools(): ToolSet {
                 userId: z.string().describe("User ID"),
             }),
             execute: async (args) => {
-                const tasks = listTasks(args.userId);
+                const tasks = await listTasks(args.userId);
                 if (tasks.length === 0) return "No active tasks.";
                 return tasks
                     .map(
@@ -65,11 +64,11 @@ function buildSchedulerTools(): ToolSet {
         delete_task: tool({
             description: "Cancel and delete a scheduled task by its ID.",
             inputSchema: z.object({
-                id: z.number().describe("Task ID to delete"),
+                id: z.string().describe("Task ID to delete"),
             }),
             execute: async (args) => {
                 unregisterTask(args.id);
-                deleteTask(args.id);
+                await deleteTask(args.id);
                 return `Task ${args.id} deleted.`;
             },
         }),
@@ -104,15 +103,7 @@ function buildMemoryTools(): ToolSet {
                 value: z.string().describe("Value to store"),
             }),
             execute: async (args) => {
-                db.run(
-                    `INSERT INTO memories (userId, key, value, source, updatedAt)
-           VALUES (?, ?, ?, 'agent', datetime('now'))
-           ON CONFLICT(userId, key) DO UPDATE SET
-             value = excluded.value,
-             source = 'agent',
-             updatedAt = datetime('now')`,
-                    [args.userId, args.key, args.value]
-                );
+                await setMemory(args.userId, args.key, args.value);
                 return `Memory saved: ${args.key} = ${args.value}`;
             },
         }),
@@ -123,12 +114,12 @@ function buildMemoryTools(): ToolSet {
                 key: z.string().describe("Memory key to delete"),
             }),
             execute: async (args) => {
-                db.run("DELETE FROM memories WHERE userId = ? AND key = ?", [args.userId, args.key]);
+                await deleteMemory(args.userId, args.key);
                 return `Memory deleted: ${args.key}`;
             },
         }),
         clear_conversation_history: tool({
-            description: `Remove stored chat transcript for this user from Companio's database (SQLite). Does not delete anything in Slack, Telegram, or other apps—only the local message history used for context. Use when the user asks to clear the conversation, forget this chat, or prune messages.`,
+            description: `Remove stored chat transcript for this user from Companio's database. Does not delete anything in Slack, Telegram, or other apps—only the local message history used for context. Use when the user asks to clear the conversation, forget this chat, or prune messages.`,
             inputSchema: z.object({
                 userId: z.string().describe("User ID (same as for set_memory)"),
                 platform: z.string().describe("Platform, e.g. slack or telegram"),
@@ -141,7 +132,7 @@ function buildMemoryTools(): ToolSet {
             execute: async (args) => {
                 const raw = args.threadId;
                 const thread = raw == null || (typeof raw === "string" && raw.trim() === "") ? null : raw;
-                const n = clearConversationHistory(args.userId, args.platform, thread);
+                const n = await clearConversationHistory(args.userId, args.platform, thread);
                 return `Cleared ${n} stored message row(s) from the local conversation history.`;
             },
         }),
@@ -201,10 +192,6 @@ async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
         ...buildMemoryTools(),
     };
 
-    const sqlToolEnabled = process.env.COMPANIO_SQL_TOOL === "true";
-    if (sqlToolEnabled) {
-        Object.assign(tools, getCompanioSqliteTools());
-    }
 
     if (slackEnabled) {
         const conn = await connectExternalMcp("slack", externalMcpServers.slack!);
@@ -243,9 +230,6 @@ async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
         lines.push(
             "**GitHub** — tools whose names start with `github__` (@modelcontextprotocol/server-github; GITHUB_TOKEN)."
         );
-    }
-    if (sqlToolEnabled) {
-        lines.push("**run_sql** — query the local Companio SQLite DB; read-only unless COMPANIO_SQL_WRITE=true.");
     }
 
     const capabilitiesPromptSection = `## Available tools in this deployment

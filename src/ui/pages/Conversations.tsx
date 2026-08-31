@@ -5,7 +5,7 @@ import { Input } from "../components/Input";
 import { PageHeader } from "../components/PageHeader";
 
 interface Turn {
-  id: number;
+  id: string;
   userId: string;
   platform: string;
   threadId: string | null;

@@ -1,0 +1,9 @@
+.git
+.github
+.env
+node_modules
+companio.db
+companio.db-wal
+companio.db-shm
+dist
+coverage

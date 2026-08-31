@@ -8,12 +8,12 @@ import { eventVariant } from "../lib/utils";
 interface Status {
     uptime: number;
     activeTasksCount: number;
-    dbSize: number;
+    database: string;
     platforms: number;
 }
 
 interface Event {
-    id: number;
+    id: string;
     userId: string;
     type: string;
     payload: string | null;
@@ -29,12 +29,6 @@ function formatUptime(s: number): string {
     if (h > 0) return `${h}h ${m}m`;
     if (m > 0) return `${m}m ${sec}s`;
     return `${sec}s`;
-}
-
-function formatBytes(b: number): string {
-    if (b < 1024) return `${b} B`;
-    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
-    return `${(b / 1024 / 1024).toFixed(2)} MB`;
 }
 
 export function Overview() {
@@ -61,8 +55,8 @@ export function Overview() {
                 <Card title="Active Tasks">
                     <p className="text-2xl font-bold tabular-nums">{status?.activeTasksCount ?? "—"}</p>
                 </Card>
-                <Card title="DB Size">
-                    <p className="text-2xl font-bold tabular-nums">{status ? formatBytes(status.dbSize) : "—"}</p>
+                <Card title="Database">
+                    <p className="text-2xl font-bold tabular-nums">{status?.database ?? "—"}</p>
                 </Card>
                 <Card title="Platforms">
                     <p className="text-2xl font-bold tabular-nums">{status?.platforms ?? "—"}</p>

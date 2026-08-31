@@ -1,4 +1,4 @@
-import { migrate } from "./db/schema.ts";
+import { initDatabase, closeDatabase } from "./db/schema.ts";
 import { initCapabilities, closeMcpClients } from "./agent/capabilities.ts";
 import { registerPlatform, startAllPlatforms } from "./triggers/registry.ts";
 import { telegramPlatform } from "./triggers/telegram.ts";
@@ -7,15 +7,15 @@ import { startScheduler } from "./scheduler/engine.ts";
 import { startCrons } from "./triggers/cron.ts";
 import { startDashboard } from "./ui/server.ts";
 
-migrate();
-console.log("Database migrated");
+await initDatabase();
+console.log("MongoDB connected");
 
 await initCapabilities();
 
 registerPlatform(telegramPlatform);
 registerPlatform(discordPlatform);
 
-startScheduler();
+await startScheduler();
 startCrons();
 startAllPlatforms();
 startDashboard();
@@ -24,6 +24,7 @@ console.log("Companio is running");
 
 const shutdown = async () => {
     await closeMcpClients();
+    await closeDatabase();
     process.exit(0);
 };
 

@@ -1,69 +1,13 @@
-import { db } from "../db/schema.ts";
+import { ObjectId } from "mongodb";
+import { collections, type ScheduledTaskDocument } from "../db/schema.ts";
 
-export interface ScheduledTask {
-  id: number;
-  userId: string;
-  label: string;
-  prompt: string;
-  schedule: string;      // cron expression OR ISO datetime
-  recurring: number;     // 0 = one-shot, 1 = repeating
-  mode: "message" | "agent";
-  platform: string;
-  channelId: string;
-  active: number;
-  lastFiredAt: string | null;
-  createdAt: string;
-}
-
-export function createTask(
-  userId: string,
-  label: string,
-  prompt: string,
-  schedule: string,
-  recurring: boolean,
-  mode: "message" | "agent",
-  platform: string,
-  channelId: string
-): ScheduledTask {
-  const result = db.run(
-    `INSERT INTO scheduled_tasks (userId, label, prompt, schedule, recurring, mode, platform, channelId)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    [userId, label, prompt, schedule, recurring ? 1 : 0, mode, platform, channelId]
-  );
-  return getTask(result.lastInsertRowid as number)!;
-}
-
-export function getTask(id: number): ScheduledTask | null {
-  return db
-    .query<ScheduledTask, [number]>("SELECT * FROM scheduled_tasks WHERE id = ?")
-    .get(id) ?? null;
-}
-
-export function getActiveTasks(): ScheduledTask[] {
-  return db
-    .query<ScheduledTask, []>("SELECT * FROM scheduled_tasks WHERE active = 1")
-    .all();
-}
-
-export function listTasks(userId: string): ScheduledTask[] {
-  return db
-    .query<ScheduledTask, [string]>(
-      "SELECT * FROM scheduled_tasks WHERE userId = ? AND active = 1 ORDER BY createdAt ASC"
-    )
-    .all(userId);
-}
-
-export function deactivateTask(id: number): void {
-  db.run("UPDATE scheduled_tasks SET active = 0 WHERE id = ?", [id]);
-}
-
-export function deleteTask(id: number): void {
-  db.run("DELETE FROM scheduled_tasks WHERE id = ?", [id]);
-}
-
-export function touchFiredAt(id: number): void {
-  db.run(
-    "UPDATE scheduled_tasks SET lastFiredAt = datetime('now') WHERE id = ?",
-    [id]
-  );
-}
+export interface ScheduledTask { id: string; userId: string; label: string; prompt: string; schedule: string; recurring: boolean; mode: "message" | "agent"; platform: string; channelId: string; active: boolean; lastFiredAt: string | null; createdAt: string; }
+function serializeTask(task: ScheduledTaskDocument): ScheduledTask { return { id: task._id.toHexString(), userId: task.userId, label: task.label, prompt: task.prompt, schedule: task.schedule, recurring: task.recurring, mode: task.mode, platform: task.platform, channelId: task.channelId, active: task.active, lastFiredAt: task.lastFiredAt?.toISOString() ?? null, createdAt: task.createdAt.toISOString() }; }
+function objectId(id: string): ObjectId | null { return ObjectId.isValid(id) ? new ObjectId(id) : null; }
+export async function createTask(userId: string, label: string, prompt: string, schedule: string, recurring: boolean, mode: "message" | "agent", platform: string, channelId: string): Promise<ScheduledTask> { const task = { userId, label, prompt, schedule, recurring, mode, platform, channelId, active: true, lastFiredAt: null, createdAt: new Date() }; const result = await collections.scheduledTasks().insertOne(task); return serializeTask({ ...task, _id: result.insertedId }); }
+export async function getTask(id: string): Promise<ScheduledTask | null> { const _id = objectId(id); const task = _id ? await collections.scheduledTasks().findOne({ _id }) : null; return task ? serializeTask(task) : null; }
+export async function getActiveTasks(): Promise<ScheduledTask[]> { return (await collections.scheduledTasks().find({ active: true }).toArray()).map(serializeTask); }
+export async function listTasks(userId: string): Promise<ScheduledTask[]> { return (await collections.scheduledTasks().find({ userId, active: true }).sort({ createdAt: 1 }).toArray()).map(serializeTask); }
+export async function deactivateTask(id: string): Promise<void> { const _id = objectId(id); if (_id) await collections.scheduledTasks().updateOne({ _id }, { $set: { active: false } }); }
+export async function deleteTask(id: string): Promise<void> { const _id = objectId(id); if (_id) await collections.scheduledTasks().deleteOne({ _id }); }
+export async function touchFiredAt(id: string): Promise<void> { const _id = objectId(id); if (_id) await collections.scheduledTasks().updateOne({ _id }, { $set: { lastFiredAt: new Date() } }); }

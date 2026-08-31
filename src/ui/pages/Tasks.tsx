@@ -6,11 +6,11 @@ import { Button } from "../components/Button";
 import { PageHeader } from "../components/PageHeader";
 
 interface Task {
-  id: number;
+  id: string;
   userId: string;
   label: string;
   schedule: string;
-  recurring: number;
+  recurring: boolean;
   mode: string;
   platform: string;
   lastFiredAt: string | null;
@@ -19,7 +19,7 @@ interface Task {
 }
 
 interface LiveJob {
-  id: number;
+  id: string;
   nextFireTime: string | null;
 }
 
@@ -44,7 +44,7 @@ export function Tasks() {
     load();
   }, []);
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     await api.delete("/api/tasks/" + id);
     setTasks((prev) => prev.filter((t) => t.id !== id));
   };

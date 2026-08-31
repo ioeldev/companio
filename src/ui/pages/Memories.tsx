@@ -5,7 +5,7 @@ import { Input } from "../components/Input";
 import { PageHeader } from "../components/PageHeader";
 
 interface Memory {
-  id: number;
+  id: string;
   userId: string;
   key: string;
   value: string;
@@ -17,7 +17,7 @@ interface Memory {
 export function Memories() {
   const [memories, setMemories] = useState<Memory[]>([]);
   const [filterUserId, setFilterUserId] = useState("");
-  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
   const load = () => {

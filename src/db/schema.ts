@@ -1,70 +1,101 @@
-import { Database } from "bun:sqlite";
-import { join } from "node:path";
+import { Db, MongoClient, type Document } from "mongodb";
 
-const dbPath = join(import.meta.dir, "../../companio.db");
-export const db = new Database(dbPath, { create: true });
+let client: MongoClient | null = null;
+let database: Db | null = null;
 
-// Enable WAL mode for better concurrent access
-db.run("PRAGMA journal_mode=WAL;");
-db.run("PRAGMA foreign_keys=ON;");
+export interface MemoryDocument extends Document {
+  userId: string;
+  key: string;
+  value: string;
+  source?: string | null;
+  confidence?: number;
+  updatedAt: Date;
+}
+export interface ConversationDocument extends Document {
+  userId: string;
+  platform: string;
+  threadId: string | null;
+  role: string;
+  content: string;
+  createdAt: Date;
+}
+export interface ScheduledTaskDocument extends Document {
+  userId: string;
+  label: string;
+  prompt: string;
+  schedule: string;
+  recurring: boolean;
+  mode: "message" | "agent";
+  platform: string;
+  channelId: string;
+  active: boolean;
+  lastFiredAt: Date | null;
+  createdAt: Date;
+}
+export interface EventDocument extends Document {
+  userId: string;
+  type: string;
+  payload: string | null;
+  createdAt: Date;
+}
+export interface AgentSessionDocument extends Document {
+  userId: string;
+  platform: string;
+  threadId: string | null;
+  sessionId: string;
+  updatedAt: Date;
+}
 
-export function migrate(): void {
-  db.run(`
-    CREATE TABLE IF NOT EXISTS memories (
-      id          INTEGER PRIMARY KEY,
-      userId      TEXT NOT NULL,
-      key         TEXT NOT NULL,
-      value       TEXT NOT NULL,
-      source      TEXT,
-      confidence  REAL DEFAULT 1.0,
-      updatedAt   TEXT DEFAULT (datetime('now')),
-      UNIQUE(userId, key)
+function getDatabase(): Db {
+  if (!database)
+    throw new Error(
+      "MongoDB is not initialized. Call initDatabase() before accessing data.",
+    );
+  return database;
+}
+
+export const collections = {
+  memories: () => getDatabase().collection<MemoryDocument>("memories"),
+  conversations: () =>
+    getDatabase().collection<ConversationDocument>("conversations"),
+  scheduledTasks: () =>
+    getDatabase().collection<ScheduledTaskDocument>("scheduled_tasks"),
+  events: () => getDatabase().collection<EventDocument>("events"),
+  agentSessions: () =>
+    getDatabase().collection<AgentSessionDocument>("agent_sessions"),
+};
+
+/** Connects to MongoDB Atlas and creates the indexes used by the application. */
+export async function initDatabase(): Promise<void> {
+  if (database) return;
+  const uri = process.env.MONGODB_URI?.trim();
+  if (!uri)
+    throw new Error(
+      "MONGODB_URI is required. Add your MongoDB Atlas connection string to .env.",
     );
 
-    CREATE TABLE IF NOT EXISTS conversations (
-      id          INTEGER PRIMARY KEY,
-      userId      TEXT NOT NULL,
-      platform    TEXT NOT NULL,
-      threadId    TEXT,
-      role        TEXT NOT NULL,
-      content     TEXT NOT NULL,
-      createdAt   TEXT DEFAULT (datetime('now'))
-    );
+  client = new MongoClient(uri);
+  await client.connect();
+  database = client.db(process.env.MONGODB_DB?.trim() || "companio");
+  await Promise.all([
+    collections.memories().createIndex({ userId: 1, key: 1 }, { unique: true }),
+    collections.memories().createIndex({ userId: 1, updatedAt: -1 }),
+    collections
+      .conversations()
+      .createIndex({ userId: 1, platform: 1, threadId: 1, createdAt: -1 }),
+    collections.scheduledTasks().createIndex({ active: 1 }),
+    collections
+      .scheduledTasks()
+      .createIndex({ userId: 1, active: 1, createdAt: 1 }),
+    collections.events().createIndex({ createdAt: -1 }),
+    collections
+      .agentSessions()
+      .createIndex({ userId: 1, platform: 1, threadId: 1 }, { unique: true }),
+  ]);
+}
 
-    -- unified scheduler: replaces the old one-shot reminders table
-    -- schedule: cron expression ("54 5 * * *") or ISO datetime ("2026-04-09T17:00:00Z")
-    -- mode: "message" = send prompt text directly | "agent" = run through runCompanion
-    CREATE TABLE IF NOT EXISTS scheduled_tasks (
-      id          INTEGER PRIMARY KEY,
-      userId      TEXT NOT NULL,
-      label       TEXT NOT NULL,
-      prompt      TEXT NOT NULL,
-      schedule    TEXT NOT NULL,
-      recurring   INTEGER DEFAULT 0,
-      mode        TEXT NOT NULL DEFAULT 'message',
-      platform    TEXT NOT NULL,
-      channelId   TEXT NOT NULL,
-      active      INTEGER DEFAULT 1,
-      lastFiredAt TEXT,
-      createdAt   TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS events (
-      id          INTEGER PRIMARY KEY,
-      userId      TEXT NOT NULL,
-      type        TEXT NOT NULL,
-      payload     TEXT,
-      createdAt   TEXT DEFAULT (datetime('now'))
-    );
-
-    CREATE TABLE IF NOT EXISTS agent_sessions (
-      id          INTEGER PRIMARY KEY,
-      userId      TEXT NOT NULL,
-      platform    TEXT NOT NULL,
-      threadId    TEXT,
-      sessionId   TEXT NOT NULL,
-      updatedAt   TEXT DEFAULT (datetime('now')),
-      UNIQUE(userId, platform, threadId)
-    );
-  `);
+export async function closeDatabase(): Promise<void> {
+  await client?.close();
+  client = null;
+  database = null;
 }

@@ -5,8 +5,7 @@
     "private": true,
     "scripts": {
         "dev": "bun --watch src/index.ts",
-        "start": "bun src/index.ts",
-        "db:reset": "rm -f companio.db && bun src/index.ts"
+        "start": "bun src/index.ts"
     },
     "devDependencies": {
         "@types/bun": "latest",
@@ -17,13 +16,15 @@
     "dependencies": {
         "@ai-sdk/anthropic": "^3.0.69",
         "@ai-sdk/mcp": "^1.0.36",
+        "@ai-sdk/openai": "^4.0.52",
         "@ai-sdk/xai": "^3.0.82",
-        "ai": "^6.0.158",
+        "ai": "^7.0.85",
         "ai-sdk-provider-claude-code": "^3.4.4",
         "bun-plugin-tailwind": "^0.1.2",
         "croner": "^10.0.1",
         "discord.js": "^14.26.2",
         "grammy": "^1.42.0",
+        "mongodb": "^7.6.0",
         "postcss": "^8.5.9",
         "react": "^19.2.5",
         "react-dom": "^19.2.5",

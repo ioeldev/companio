@@ -4,7 +4,7 @@ import { saveConversation, getContextMessages } from "../memory/conversations.ts
 import { buildSystemPrompt } from "./prompt.ts";
 import { getCapabilities } from "./capabilities.ts";
 import { resolveModel } from "./model.ts";
-import { db } from "../db/schema.ts";
+import { collections } from "../db/schema.ts";
 import type { AgentTask } from "./types.ts";
 import { processCavemanUserCommand } from "./caveman.ts";
 
@@ -13,15 +13,11 @@ export async function runCompanion(task: AgentTask): Promise<string> {
 
     const cave = processCavemanUserCommand(task.userId, task.message);
     if (cave.earlyReply !== undefined) {
-        saveConversation(task.userId, task.platform, task.threadId ?? null, "user", task.message.trim());
-        saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", cave.earlyReply);
-        db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'message_received', ?)`, [
-            task.userId,
-            JSON.stringify({ platform: task.platform, trigger: task.trigger, cavemanCommand: true }),
-        ]);
-        db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'message_sent', ?)`, [
-            task.userId,
-            JSON.stringify({ platform: task.platform, cavemanCommand: true }),
+        await saveConversation(task.userId, task.platform, task.threadId ?? null, "user", task.message.trim());
+        await saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", cave.earlyReply);
+        await collections.events().insertMany([
+            { userId: task.userId, type: "message_received", payload: JSON.stringify({ platform: task.platform, trigger: task.trigger, cavemanCommand: true }), createdAt: new Date() },
+            { userId: task.userId, type: "message_sent", payload: JSON.stringify({ platform: task.platform, cavemanCommand: true }), createdAt: new Date() },
         ]);
         return cave.earlyReply;
     }
@@ -29,7 +25,7 @@ export async function runCompanion(task: AgentTask): Promise<string> {
     const userMessageForTurn =
         cave.textForModel !== task.message ? cave.textForModel.trim() || task.message.trim() : task.message.trim();
 
-    const memories = getMemories(task.userId);
+    const memories = await getMemories(task.userId);
 
     const systemPrompt = buildSystemPrompt(task, memories, {
         clickupFolderId: process.env.CLICKUP_FOLDER_ID,
@@ -38,14 +34,11 @@ export async function runCompanion(task: AgentTask): Promise<string> {
         capabilitiesSection: capabilities.capabilitiesPromptSection,
     });
 
-    saveConversation(task.userId, task.platform, task.threadId ?? null, "user", userMessageForTurn);
+    await saveConversation(task.userId, task.platform, task.threadId ?? null, "user", userMessageForTurn);
 
-    db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'message_received', ?)`, [
-        task.userId,
-        JSON.stringify({ platform: task.platform, trigger: task.trigger }),
-    ]);
+    await collections.events().insertOne({ userId: task.userId, type: "message_received", payload: JSON.stringify({ platform: task.platform, trigger: task.trigger }), createdAt: new Date() });
 
-    const contextMessages = getContextMessages(task.userId, task.platform, task.threadId ?? null);
+    const contextMessages = await getContextMessages(task.userId, task.platform, task.threadId ?? null);
 
     let resultText = "";
 
@@ -60,19 +53,13 @@ export async function runCompanion(task: AgentTask): Promise<string> {
         resultText = result.text?.trim() ?? "";
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'error', ?)`, [
-            task.userId,
-            JSON.stringify({ error: errorMsg }),
-        ]);
+        await collections.events().insertOne({ userId: task.userId, type: "error", payload: JSON.stringify({ error: errorMsg }), createdAt: new Date() });
         throw err;
     }
 
     if (resultText) {
-        saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", resultText);
-        db.run(`INSERT INTO events (userId, type, payload) VALUES (?, 'message_sent', ?)`, [
-            task.userId,
-            JSON.stringify({ platform: task.platform, length: resultText.length }),
-        ]);
+        await saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", resultText);
+        await collections.events().insertOne({ userId: task.userId, type: "message_sent", payload: JSON.stringify({ platform: task.platform, length: resultText.length }), createdAt: new Date() });
     }
 
     return resultText || "I'm here. What can I help you with?";
