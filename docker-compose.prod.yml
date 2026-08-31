@@ -1,6 +1,8 @@
 services:
   companio:
-    image: ${IMAGE:?Set IMAGE to the GHCR image tag to deploy}
+    # Deploys override IMAGE with an immutable SHA tag. The default keeps manual
+    # commands such as `docker compose logs` and `docker compose ps` usable.
+    image: ${IMAGE:-ghcr.io/ioeldev/companio:latest}
     restart: unless-stopped
     env_file:
       - .env

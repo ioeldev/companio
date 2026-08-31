@@ -24,6 +24,8 @@ Configure these GitHub Actions secrets: `VPS_HOST`, `VPS_USER`, `VPS_SSH_KEY`, a
 
 Create `~/apps/companio/.env` on the VPS with the runtime secrets from `.env.example` before the first deployment. Docker and the Compose plugin must be installed there. The published GHCR package must be public, or `GHCR_TOKEN` must be authorized to read it.
 
+For routine VPS diagnostics, run `cd ~/apps/companio && docker compose -f docker-compose.prod.yml logs -f companio`. Deployments still use an immutable image tag, while manual Compose commands default to the `latest` image.
+
 To run for production:
 
 ```bash
