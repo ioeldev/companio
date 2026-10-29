@@ -123,7 +123,7 @@ export function buildWorkspaceTools(options: {
     return {
         workspace_directory: tool({
             description:
-                "Get or change this session working directory inside the mounted workspace. Host ~/seed is mounted as /workspace. Paths are container paths, not host paths.",
+                "Get or change this session working directory inside the mounted workspace. The configured server workspace is mounted as /workspace in production. Paths are container paths, not host paths.",
             inputSchema: z.object({ path: z.string().optional() }),
             execute: async ({ path }) => {
                 if (path !== undefined) {
@@ -140,13 +140,11 @@ export function buildWorkspaceTools(options: {
                 "List a workspace directory. Use execute_shell with rg --files or rg for recursive file/text searches.",
             inputSchema: z.object({ path: z.string().default(".") }),
             execute: async ({ path }) =>
-                (await readdir(await at(path), { withFileTypes: true }))
-                    .slice(0, 500)
-                    .map((e) => ({
-                        name: e.name,
-                        directory: e.isDirectory(),
-                        symlink: e.isSymbolicLink(),
-                    })),
+                (await readdir(await at(path), { withFileTypes: true })).slice(0, 500).map((e) => ({
+                    name: e.name,
+                    directory: e.isDirectory(),
+                    symlink: e.isSymbolicLink(),
+                })),
         }),
         read_file: tool({
             description: "Read a UTF-8 workspace file, with line pagination.",

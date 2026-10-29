@@ -12,7 +12,7 @@ services:
             COMPANIO_WORKSPACE_ROOT: /workspace
         volumes:
             - type: bind
-              source: ${COMPANIO_WORKSPACE_HOST_PATH:-${HOME}/seed}
+              source: ${COMPANIO_WORKSPACE_HOST_PATH:-/home/seed}
               target: /workspace
               bind:
                   create_host_path: false

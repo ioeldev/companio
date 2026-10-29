@@ -86,12 +86,12 @@ bunx tsc --noEmit
 
 ## Server workspace and Python
 
-Production Compose mounts `${HOME}/seed` on the server read/write at `/workspace`
+Production Compose mounts `/home/seed` on the server read/write at `/workspace`
 in the container. Before deploying, create it under the same server user that
 runs Compose:
 
 ```sh
-mkdir -p ~/seed
+mkdir -p /home/seed
 ```
 
 `COMPANIO_WORKSPACE_HOST_PATH` optionally overrides the host path. Compose sets
@@ -99,7 +99,7 @@ mkdir -p ~/seed
 The directory must already exist (Compose will not silently create a missing
 source). Rebuild the image and recreate the container to install Python and apply
 the mount. This mount does not expose `~/apps/companio`; place/clone projects under
-`~/seed` to make them available. The model must use `/workspace/...` container paths.
+`/home/seed` to make them available. The model must use `/workspace/...` container paths.
 
 Workspace tools are enabled only for Telegram sessions belonging to
 `TELEGRAM_OWNER_ID`. They support directory listing, paginated reads, exact text

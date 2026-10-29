@@ -53,7 +53,7 @@ async function advance(s: Session) {
               })
             : {};
         const workspacePrompt = workspaceEnabled
-            ? `\nWorkspace tools are available: list_files, read_file, write_file, edit_file, workspace_directory, execute_shell, command_status. Host ~/seed is mounted at ${workspaceRoot}. Current directory: ${s.cwd || workspaceRoot}. Python is available through python3 in execute_shell. Use these tools for local code tasks and file inspection. Poll commands until finished and verify exit codes. Preserve user files and exact requested paths. Never assume a host path is mounted. Keep edits inside the workspace. Avoid editing the same checkout in simultaneous sessions; prefer separate git worktrees.`
+            ? `\nWorkspace tools are available: list_files, read_file, write_file, edit_file, workspace_directory, execute_shell, command_status. The configured workspace root is ${workspaceRoot}. Current directory: ${s.cwd || workspaceRoot}. Python is available through python3 in execute_shell. Use these tools for local code tasks and file inspection. Poll commands until finished and verify exit codes. Preserve user files and exact requested paths. Never assume a host path is mounted. Keep edits inside the workspace. Avoid editing the same checkout in simultaneous sessions; prefer separate git worktrees.`
             : "";
         const instructions =
             buildSystemPrompt(
