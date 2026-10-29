@@ -1,3 +1,8 @@
+import {
+    formatTelegram,
+    isTelegramFormattingError,
+    type TelegramChunk,
+} from "./telegram-format.ts";
 import { Bot, InlineKeyboard, type Context } from "grammy";
 import type { Platform } from "./platform.ts";
 import { collections } from "../db/schema.ts";
@@ -57,6 +62,24 @@ class TelegramPlatform implements Platform {
     }
     private bot: Bot | null = null;
 
+    private async sendFormatted(
+        channelId: string,
+        chunk: TelegramChunk,
+        keyboard?: InlineKeyboard,
+    ) {
+        if (!this.bot) throw new Error("Telegram not initialized");
+        const options = keyboard ? { reply_markup: keyboard } : {};
+        try {
+            return await this.bot.api.sendMessage(channelId, chunk.html, {
+                ...options,
+                parse_mode: "HTML",
+            });
+        } catch (error) {
+            if (!isTelegramFormattingError(error)) throw error;
+            return this.bot.api.sendMessage(channelId, chunk.text, options);
+        }
+    }
+
     async deliver(s: Session, text: string) {
         if (!this.bot) throw new Error("Telegram not initialized");
         const keyboard = new InlineKeyboard().text("↪ Open session", `switch:${s.number}`);
@@ -70,11 +93,11 @@ class TelegramPlatform implements Platform {
                     ),
             );
         }
-        for (const [index, chunk] of splitTelegramMessage(`${label(s)}\n\n${text}`).entries()) {
-            const sent = await this.bot.api.sendMessage(
+        for (const [index, chunk] of formatTelegram(text, `${label(s)}\n\n`).entries()) {
+            const sent = await this.sendFormatted(
                 s.channelId,
                 chunk,
-                index === 0 ? { reply_markup: keyboard } : {},
+                index === 0 ? keyboard : undefined,
             );
             await collections.sessionDeliveries().insertOne({
                 userId: s.userId,
@@ -146,8 +169,9 @@ class TelegramPlatform implements Platform {
                 return;
             }
             await selectSession(s);
-            await ctx.reply(
-                `Selected ${label(s)}\nStatus: ${s.status}${s.question ? `\n\n${s.question.question}` : ""}`,
+            await this.deliver(
+                s,
+                `Selected session. Status: ${s.status}${s.question ? `\n\n${s.question.question}` : ""}`,
             );
         });
         bot.command("status", async (ctx) => {
@@ -251,8 +275,9 @@ class TelegramPlatform implements Platform {
             if (action === "switch") {
                 await selectSession(s);
                 await ctx.answerCallbackQuery({ text: `Selected #${s.number}` });
-                await ctx.reply(
-                    `↪ ${label(s)}\nStatus: ${s.status}${s.question ? `\n\n${s.question.question}` : ""}`,
+                await this.deliver(
+                    s,
+                    `Selected session. Status: ${s.status}${s.question ? `\n\n${s.question.question}` : ""}`,
                 );
             } else if (action === "answer") {
                 const answer = s.question?.options[Number(option)];
@@ -306,8 +331,7 @@ class TelegramPlatform implements Platform {
     }
     async send(channelId: string, message: string): Promise<void> {
         if (!this.bot) throw new Error("Telegram not initialized");
-        for (const chunk of splitTelegramMessage(message))
-            await this.bot.api.sendMessage(channelId, chunk);
+        for (const chunk of formatTelegram(message)) await this.sendFormatted(channelId, chunk);
     }
 }
 export const telegramPlatform = new TelegramPlatform();

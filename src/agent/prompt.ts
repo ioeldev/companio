@@ -25,7 +25,9 @@ ${task.threadId ? `- **Thread ID**: ${task.threadId}` : ""}`;
 - Write your response with clear formatting and line breaks.
 - Use \`backticks\` for inline code snippets.
 - Use triple backticks for code blocks (e.g., \`\`\`javascript ... \`\`\`).
-- Use markdown syntax like *bold* and _italic_ to add emphasis if helpful.
+- Use standard Markdown: **bold**, *italic*, and ~~strikethrough~~. The server converts it to Telegram HTML.
+- Do not emit raw HTML or Telegram MarkdownV2 escapes.
+- Prefer short paragraphs and simple lists. Avoid Markdown tables; use labeled bullets instead.
 - Use [link text](url) for links.
 - Keep messages concise and well-structured.`,
 
