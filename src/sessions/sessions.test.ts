@@ -1,3 +1,4 @@
+import { restoreMessages } from "./messages.ts";
 import { expect, test } from "bun:test";
 import { ObjectId } from "mongodb";
 import { ToolLoopAgent, tool, stepCountIs, type ModelMessage } from "ai";
@@ -83,4 +84,51 @@ test("native SDK pauses for clarification, serializes, and resumes with the tool
     expect(result.text).toBe("Researching Europe.");
     expect(JSON.stringify(model.doGenerateCalls[1]!.prompt)).toContain("question-1");
     expect(JSON.stringify(model.doGenerateCalls[1]!.prompt)).toContain("Europe");
+});
+
+test("MongoDB legacy null SDK flag is repaired without changing tool payloads", async () => {
+    const messages = [
+        { role: "user", content: "Check folder" },
+        {
+            role: "assistant",
+            content: [
+                {
+                    type: "tool-call",
+                    toolCallId: "call-1",
+                    toolName: "execute_shell",
+                    input: { command: "pwd", optionalValue: null },
+                    providerExecuted: null,
+                },
+            ],
+        },
+        {
+            role: "tool",
+            content: [
+                {
+                    type: "tool-result",
+                    toolCallId: "call-1",
+                    toolName: "execute_shell",
+                    output: { type: "json", value: { exitCode: null } },
+                },
+            ],
+        },
+    ] as unknown as ModelMessage[];
+    const model = new MockLanguageModelV3({
+        doGenerate: {
+            content: [{ type: "text", text: "Continuing saved task." }],
+            finishReason: { unified: "stop", raw: undefined },
+            usage: {
+                inputTokens: { total: 1, noCache: 1, cacheRead: 0, cacheWrite: 0 },
+                outputTokens: { total: 1, text: 1, reasoning: 0 },
+            },
+            warnings: [],
+        },
+    });
+    const agent = new ToolLoopAgent({ model, stopWhen: stepCountIs(1) });
+    await expect(agent.generate({ messages })).rejects.toThrow("Invalid prompt");
+    const fixed = restoreMessages(messages);
+    expect(JSON.stringify(fixed)).toContain('"optionalValue":null');
+    expect(JSON.stringify(fixed)).toContain('"exitCode":null');
+    expect(JSON.stringify(fixed)).not.toContain('"providerExecuted":null');
+    expect((await agent.generate({ messages: fixed })).text).toBe("Continuing saved task.");
 });

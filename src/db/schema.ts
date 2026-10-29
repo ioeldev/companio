@@ -89,7 +89,7 @@ export async function initDatabase(): Promise<void> {
             "MONGODB_URI is required. Add your MongoDB Atlas connection string to .env.",
         );
 
-    client = new MongoClient(uri);
+    client = new MongoClient(uri, { ignoreUndefined: true });
     await client.connect();
     database = client.db(process.env.MONGODB_DB?.trim() || "companio");
     await Promise.all([

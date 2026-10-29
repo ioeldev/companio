@@ -1,3 +1,5 @@
+import { restoreMessages } from "./messages.ts";
+import { sessionErrorSummary } from "./errors.ts";
 import { buildWorkspaceTools, stopWorkspaceCommands } from "../tools/workspace.ts";
 import { ObjectId } from "mongodb";
 import { ToolLoopAgent, stepCountIs, tool, type ModelMessage } from "ai";
@@ -88,8 +90,14 @@ async function advance(s: Session) {
                 }),
             },
         });
-        const result = await agent.generate({ messages: s.messages, abortSignal: abort.signal });
-        const messages = [...s.messages, ...result.response.messages] as ModelMessage[];
+        const result = await agent.generate({
+            messages: restoreMessages(s.messages),
+            abortSignal: abort.signal,
+        });
+        const messages = [
+            ...restoreMessages(s.messages),
+            ...result.response.messages,
+        ] as ModelMessage[];
         const calls = result.toolCalls.filter((c) => c.toolName === "ask_user");
         if (calls.length > 1)
             throw new Error("Multiple questions in one step; resume after checking the task.");
@@ -136,13 +144,12 @@ async function advance(s: Session) {
         );
         // Delivery is retried independently from execution by the worker.
     } catch (err) {
-        const notice =
-            "Execution interrupted. Progress from completed steps is saved. Check external changes before /resume; an unfinished tool may have completed.";
+        const notice = `Execution failed: ${sessionErrorSummary(err)}\n\nCompleted steps are saved. Fix the reported issue before /resume. An interrupted tool may have completed; check external changes.`;
         const changed = await sessions().updateOne(
             { _id: s._id, status: "running" },
             { $set: { status: "failed", notice, pendingDelivery: notice, updatedAt: new Date() } },
         );
-        console.error("Session execution failed:", s.number, err);
+        console.error("Session execution failed:", s.number, sessionErrorSummary(err));
     } finally {
         running.delete(String(s._id));
     }
