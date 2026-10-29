@@ -41,7 +41,7 @@ import { generateText, stepCountIs } from "ai";
 const result = await generateText({
     model: resolveModel(),
     system: systemPrompt,
-    messages: contextMessages,   // includes current user message (saved to DB first)
+    messages: contextMessages, // includes current user message (saved to DB first)
     tools: capabilities.tools,
     stopWhen: stepCountIs(10),
 });
@@ -49,6 +49,7 @@ resultText = result.text?.trim() ?? "";
 ```
 
 Key differences:
+
 - No more streaming iterator — `generateText` returns when the agentic loop finishes.
 - Session resume via Claude Agent SDK is replaced by loading conversation history from SQLite (`getContextMessages`), which is provider-agnostic.
 - `maxTurns: 10` → `stopWhen: stepCountIs(10)`.
@@ -59,11 +60,11 @@ Key differences:
 
 A single `resolveModel()` function reads two env vars and returns a `LanguageModel` instance:
 
-| `LLM_PROVIDER` | Requires | Default model |
-|---|---|---|
-| `anthropic` (default) | `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN` | `claude-sonnet-4-5` |
-| `xai` | `XAI_API_KEY` | `grok-3` |
-| `claude-code` | Claude Code CLI authenticated (`claude auth login`) | `sonnet` |
+| `LLM_PROVIDER`        | Requires                                            | Default model       |
+| --------------------- | --------------------------------------------------- | ------------------- |
+| `anthropic` (default) | `ANTHROPIC_API_KEY` or `ANTHROPIC_AUTH_TOKEN`       | `claude-sonnet-4-5` |
+| `xai`                 | `XAI_API_KEY`                                       | `grok-3`            |
+| `claude-code`         | Claude Code CLI authenticated (`claude auth login`) | `sonnet`            |
 
 Override the model with `LLM_MODEL=<model-id>`.
 
@@ -111,12 +112,12 @@ process.on("SIGTERM", shutdown);
 
 ## Environment variable changes
 
-| Variable | Before | After |
-|---|---|---|
-| `ANTHROPIC_API_KEY` | Required | Required only when `LLM_PROVIDER=anthropic` |
-| `LLM_PROVIDER` | — | New. `anthropic` \| `xai` \| `claude-code` |
-| `LLM_MODEL` | — | New. Overrides the default model for the chosen provider |
-| `XAI_API_KEY` | — | Required when `LLM_PROVIDER=xai` |
+| Variable                  | Before                                 | After                                                             |
+| ------------------------- | -------------------------------------- | ----------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`       | Required                               | Required only when `LLM_PROVIDER=anthropic`                       |
+| `LLM_PROVIDER`            | —                                      | New. `anthropic` \| `xai` \| `claude-code`                        |
+| `LLM_MODEL`               | —                                      | New. Overrides the default model for the chosen provider          |
+| `XAI_API_KEY`             | —                                      | Required when `LLM_PROVIDER=xai`                                  |
 | `CLAUDE_CODE_OAUTH_TOKEN` | Used (incorrectly) as API key fallback | Picked up automatically by the `claude-code` provider via the CLI |
 
 ---
@@ -158,11 +159,11 @@ Alternatively, skip interactive login by exporting `CLAUDE_CODE_OAUTH_TOKEN` (co
 
 ## Packages added / removed
 
-| Package | Change |
-|---|---|
-| `ai` | Added (Vercel AI SDK core) |
-| `@ai-sdk/anthropic` | Added |
-| `@ai-sdk/xai` | Added |
-| `@ai-sdk/mcp` | Added (MCP client for AI SDK) |
-| `ai-sdk-provider-claude-code` | Added (Claude Pro/Max provider) |
+| Package                          | Change                                                              |
+| -------------------------------- | ------------------------------------------------------------------- |
+| `ai`                             | Added (Vercel AI SDK core)                                          |
+| `@ai-sdk/anthropic`              | Added                                                               |
+| `@ai-sdk/xai`                    | Added                                                               |
+| `@ai-sdk/mcp`                    | Added (MCP client for AI SDK)                                       |
+| `ai-sdk-provider-claude-code`    | Added (Claude Pro/Max provider)                                     |
 | `@anthropic-ai/claude-agent-sdk` | **Removed** from active usage (still in lockfile as transitive dep) |

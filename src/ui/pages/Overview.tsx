@@ -50,10 +50,14 @@ export function Overview() {
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <Card title="Uptime">
-                    <p className="text-2xl font-bold tabular-nums">{status ? formatUptime(status.uptime) : "—"}</p>
+                    <p className="text-2xl font-bold tabular-nums">
+                        {status ? formatUptime(status.uptime) : "—"}
+                    </p>
                 </Card>
                 <Card title="Active Tasks">
-                    <p className="text-2xl font-bold tabular-nums">{status?.activeTasksCount ?? "—"}</p>
+                    <p className="text-2xl font-bold tabular-nums">
+                        {status?.activeTasksCount ?? "—"}
+                    </p>
                 </Card>
                 <Card title="Database">
                     <p className="text-2xl font-bold tabular-nums">{status?.database ?? "—"}</p>
@@ -64,18 +68,27 @@ export function Overview() {
             </div>
 
             <div>
-                <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">Recent Events</h3>
+                <h3 className="text-xs font-semibold text-white/40 uppercase tracking-widest mb-3">
+                    Recent Events
+                </h3>
                 {events.length === 0 ? (
                     <p className="text-white/30 text-sm">No events yet.</p>
                 ) : (
                     <div className="space-y-2">
                         {events.map((ev) => (
-                            <div key={ev.id} className="flex items-start gap-3 bg-white/5 rounded-lg px-4 py-3">
+                            <div
+                                key={ev.id}
+                                className="flex items-start gap-3 bg-white/5 rounded-lg px-4 py-3"
+                            >
                                 <Badge variant={eventVariant(ev.type)}>{ev.type}</Badge>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-white/50 text-xs font-mono truncate">{ev.userId}</p>
+                                    <p className="text-white/50 text-xs font-mono truncate">
+                                        {ev.userId}
+                                    </p>
                                     {ev.payload && (
-                                        <p className="text-white/30 text-xs font-mono mt-0.5 truncate">{ev.payload}</p>
+                                        <p className="text-white/30 text-xs font-mono mt-0.5 truncate">
+                                            {ev.payload}
+                                        </p>
                                     )}
                                 </div>
                                 <time className="text-white/30 text-xs shrink-0">

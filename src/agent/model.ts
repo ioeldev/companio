@@ -19,39 +19,38 @@ const DEFAULT_CLAUDE_CODE_MODEL = "sonnet";
  * - claude-code  → Claude Pro/Max subscription via the Claude Code CLI (no API key needed)
  */
 export function resolveModel() {
-  const raw = (process.env.LLM_PROVIDER ?? "anthropic").toLowerCase();
-  const provider = (
-    ["xai", "claude-code", "openai"].includes(raw) ? raw : "anthropic"
-  ) as LlmProviderId;
-  const modelId = process.env.LLM_MODEL?.trim();
+    const raw = (process.env.LLM_PROVIDER ?? "anthropic").toLowerCase();
+    const provider = (
+        ["xai", "claude-code", "openai"].includes(raw) ? raw : "anthropic"
+    ) as LlmProviderId;
+    const modelId = process.env.LLM_MODEL?.trim();
 
-  if (provider === "claude-code") {
-    return claudeCode(modelId || DEFAULT_CLAUDE_CODE_MODEL);
-  }
-
-  if (provider === "xai") {
-    const apiKey = process.env.XAI_API_KEY?.trim();
-    if (!apiKey) {
-      throw new Error("XAI_API_KEY is required when LLM_PROVIDER=xai");
+    if (provider === "claude-code") {
+        return claudeCode(modelId || DEFAULT_CLAUDE_CODE_MODEL);
     }
-    return createXai({ apiKey })(modelId || DEFAULT_XAI_MODEL);
-  }
 
-  if (provider === "openai") {
-    const apiKey = process.env.OPENAI_API_KEY?.trim();
-    if (!apiKey) {
-      throw new Error("OPENAI_API_KEY is required when LLM_PROVIDER=openai");
+    if (provider === "xai") {
+        const apiKey = process.env.XAI_API_KEY?.trim();
+        if (!apiKey) {
+            throw new Error("XAI_API_KEY is required when LLM_PROVIDER=xai");
+        }
+        return createXai({ apiKey })(modelId || DEFAULT_XAI_MODEL);
     }
-    return createOpenAI({ apiKey })(modelId || DEFAULT_OPENAI_MODEL);
-  }
 
-  const apiKey =
-    process.env.ANTHROPIC_API_KEY?.trim() ||
-    process.env.ANTHROPIC_AUTH_TOKEN?.trim();
-  if (!apiKey) {
-    throw new Error(
-      "ANTHROPIC_API_KEY (or ANTHROPIC_AUTH_TOKEN) is required when LLM_PROVIDER=anthropic",
-    );
-  }
-  return createAnthropic({ apiKey })(modelId || DEFAULT_ANTHROPIC_MODEL);
+    if (provider === "openai") {
+        const apiKey = process.env.OPENAI_API_KEY?.trim();
+        if (!apiKey) {
+            throw new Error("OPENAI_API_KEY is required when LLM_PROVIDER=openai");
+        }
+        return createOpenAI({ apiKey })(modelId || DEFAULT_OPENAI_MODEL);
+    }
+
+    const apiKey =
+        process.env.ANTHROPIC_API_KEY?.trim() || process.env.ANTHROPIC_AUTH_TOKEN?.trim();
+    if (!apiKey) {
+        throw new Error(
+            "ANTHROPIC_API_KEY (or ANTHROPIC_AUTH_TOKEN) is required when LLM_PROVIDER=anthropic",
+        );
+    }
+    return createAnthropic({ apiKey })(modelId || DEFAULT_ANTHROPIC_MODEL);
 }

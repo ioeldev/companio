@@ -1,19 +1,19 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #111;
+    --color-background: #111;
 }
 
 @layer base {
-  :root {
-    color-scheme: dark;
-    font-family: Inter, system-ui, Helvetica, Arial, sans-serif;
-  }
+    :root {
+        color-scheme: dark;
+        font-family: Inter, system-ui, Helvetica, Arial, sans-serif;
+    }
 
-  body {
-    background-color: #111;
-    color: #e8e8e8;
-    height: 100%;
-    overflow: hidden;
-  }
+    body {
+        background-color: #111;
+        color: #e8e8e8;
+        height: 100%;
+        overflow: hidden;
+    }
 }

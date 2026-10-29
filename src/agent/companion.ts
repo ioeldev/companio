@@ -13,17 +13,48 @@ export async function runCompanion(task: AgentTask): Promise<string> {
 
     const cave = processCavemanUserCommand(task.userId, task.message);
     if (cave.earlyReply !== undefined) {
-        await saveConversation(task.userId, task.platform, task.threadId ?? null, "user", task.message.trim());
-        await saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", cave.earlyReply);
+        await saveConversation(
+            task.userId,
+            task.platform,
+            task.threadId ?? null,
+            "user",
+            task.message.trim(),
+        );
+        await saveConversation(
+            task.userId,
+            task.platform,
+            task.threadId ?? null,
+            "assistant",
+            cave.earlyReply,
+        );
         await collections.events().insertMany([
-            { userId: task.userId, type: "message_received", payload: JSON.stringify({ platform: task.platform, trigger: task.trigger, cavemanCommand: true }), createdAt: new Date() },
-            { userId: task.userId, type: "message_sent", payload: JSON.stringify({ platform: task.platform, cavemanCommand: true }), createdAt: new Date() },
+            {
+                userId: task.userId,
+                type: "message_received",
+                payload: JSON.stringify({
+                    platform: task.platform,
+                    trigger: task.trigger,
+                    cavemanCommand: true,
+                }),
+                createdAt: new Date(),
+            },
+            {
+                userId: task.userId,
+                type: "message_sent",
+                payload: JSON.stringify({
+                    platform: task.platform,
+                    cavemanCommand: true,
+                }),
+                createdAt: new Date(),
+            },
         ]);
         return cave.earlyReply;
     }
 
     const userMessageForTurn =
-        cave.textForModel !== task.message ? cave.textForModel.trim() || task.message.trim() : task.message.trim();
+        cave.textForModel !== task.message
+            ? cave.textForModel.trim() || task.message.trim()
+            : task.message.trim();
 
     const memories = await getMemories(task.userId);
 
@@ -34,11 +65,29 @@ export async function runCompanion(task: AgentTask): Promise<string> {
         capabilitiesSection: capabilities.capabilitiesPromptSection,
     });
 
-    await saveConversation(task.userId, task.platform, task.threadId ?? null, "user", userMessageForTurn);
+    await saveConversation(
+        task.userId,
+        task.platform,
+        task.threadId ?? null,
+        "user",
+        userMessageForTurn,
+    );
 
-    await collections.events().insertOne({ userId: task.userId, type: "message_received", payload: JSON.stringify({ platform: task.platform, trigger: task.trigger }), createdAt: new Date() });
+    await collections.events().insertOne({
+        userId: task.userId,
+        type: "message_received",
+        payload: JSON.stringify({
+            platform: task.platform,
+            trigger: task.trigger,
+        }),
+        createdAt: new Date(),
+    });
 
-    const contextMessages = await getContextMessages(task.userId, task.platform, task.threadId ?? null);
+    const contextMessages = await getContextMessages(
+        task.userId,
+        task.platform,
+        task.threadId ?? null,
+    );
 
     let resultText = "";
 
@@ -49,17 +98,41 @@ export async function runCompanion(task: AgentTask): Promise<string> {
             messages: contextMessages,
             tools: capabilities.tools,
             stopWhen: stepCountIs(10),
+            providerOptions: {
+                openai: {
+                    tier: "fast",
+                },
+            },
         });
         resultText = result.text?.trim() ?? "";
     } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        await collections.events().insertOne({ userId: task.userId, type: "error", payload: JSON.stringify({ error: errorMsg }), createdAt: new Date() });
+        await collections.events().insertOne({
+            userId: task.userId,
+            type: "error",
+            payload: JSON.stringify({ error: errorMsg }),
+            createdAt: new Date(),
+        });
         throw err;
     }
 
     if (resultText) {
-        await saveConversation(task.userId, task.platform, task.threadId ?? null, "assistant", resultText);
-        await collections.events().insertOne({ userId: task.userId, type: "message_sent", payload: JSON.stringify({ platform: task.platform, length: resultText.length }), createdAt: new Date() });
+        await saveConversation(
+            task.userId,
+            task.platform,
+            task.threadId ?? null,
+            "assistant",
+            resultText,
+        );
+        await collections.events().insertOne({
+            userId: task.userId,
+            type: "message_sent",
+            payload: JSON.stringify({
+                platform: task.platform,
+                length: resultText.length,
+            }),
+            createdAt: new Date(),
+        });
     }
 
     return resultText || "I'm here. What can I help you with?";

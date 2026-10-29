@@ -51,7 +51,7 @@ function ackReset(): string {
  */
 export function processCavemanUserCommand(
     userId: string,
-    message: string
+    message: string,
 ): { earlyReply?: string; textForModel: string } {
     const trimmed = message.trim();
     if (!trimmed) return { textForModel: message };
@@ -60,27 +60,34 @@ export function processCavemanUserCommand(
     const firstLine = (nl === -1 ? trimmed : trimmed.slice(0, nl)).trim();
     const rest = nl === -1 ? "" : trimmed.slice(nl + 1).trim();
 
-    const tryLevel = (level: string, withRest: boolean): { earlyReply?: string; textForModel: string } => {
+    const tryLevel = (
+        level: string,
+        withRest: boolean,
+    ): { earlyReply?: string; textForModel: string } => {
         setMemory(userId, COMPANIO_CAVEMAN_MEMORY_KEY, level, "caveman_command");
         if (withRest && rest) return { textForModel: rest };
         return { earlyReply: ackSet(level), textForModel: "" };
     };
 
     // /caveman | /caveman full | /caveman wenyan-full
-    let m = firstLine.match(/^\/caveman(?:\s+(lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra))?\s*$/i);
+    let m = firstLine.match(
+        /^\/caveman(?:\s+(lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra))?\s*$/i,
+    );
     if (m) {
         const level = (m[1] ?? "full").toLowerCase();
         return tryLevel(level, true);
     }
 
     // caveman full (no leading slash)
-    m = firstLine.match(
-        /^caveman\s+(lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra)\s*$/i
-    );
+    m = firstLine.match(/^caveman\s+(lite|full|ultra|wenyan-lite|wenyan-full|wenyan-ultra)\s*$/i);
     if (m) return tryLevel(m[1]!.toLowerCase(), true);
 
     // caveman off | stop caveman | normal mode
-    if (/^caveman\s+off\s*$/i.test(firstLine) || /^stop\s+caveman\s*$/i.test(firstLine) || /^normal\s+mode\s*$/i.test(firstLine)) {
+    if (
+        /^caveman\s+off\s*$/i.test(firstLine) ||
+        /^stop\s+caveman\s*$/i.test(firstLine) ||
+        /^normal\s+mode\s*$/i.test(firstLine)
+    ) {
         setMemory(userId, COMPANIO_CAVEMAN_MEMORY_KEY, "off", "caveman_command");
         if (rest) return { textForModel: rest };
         return { earlyReply: ackOff(), textForModel: "" };

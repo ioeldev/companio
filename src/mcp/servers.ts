@@ -28,7 +28,8 @@ export const externalMcpServers: Record<string, ExternalMcpStdioConfig> = {
         command: "bunx",
         args: ["-y", "@modelcontextprotocol/server-github"],
         env: {
-            GITHUB_PERSONAL_ACCESS_TOKEN: process.env.GITHUB_TOKEN ?? process.env.GITHUB_PERSONAL_ACCESS_TOKEN ?? "",
+            GITHUB_PERSONAL_ACCESS_TOKEN:
+                process.env.GITHUB_TOKEN ?? process.env.GITHUB_PERSONAL_ACCESS_TOKEN ?? "",
         },
     },
 };

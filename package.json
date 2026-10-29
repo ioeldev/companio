@@ -5,12 +5,18 @@
     "private": true,
     "scripts": {
         "dev": "bun --watch src/index.ts",
-        "start": "bun src/index.ts"
+        "start": "bun src/index.ts",
+        "prepare": "husky",
+        "format": "prettier --write .",
+        "format:check": "prettier --check ."
     },
     "devDependencies": {
         "@types/bun": "latest",
         "@types/react": "^19.2.14",
         "@types/react-dom": "^19.2.3",
+        "husky": "^9.1.7",
+        "lint-staged": "^17.6.0",
+        "prettier": "^3.9.10",
         "typescript": "^5"
     },
     "dependencies": {
@@ -30,5 +36,8 @@
         "react-dom": "^19.2.5",
         "tailwindcss": "^4.2.2",
         "zod": "^4.3.6"
+    },
+    "lint-staged": {
+        "*.{js,jsx,ts,tsx,json,jsonc,md,mdx,css,scss,html,yml,yaml}": "prettier --write"
     }
 }

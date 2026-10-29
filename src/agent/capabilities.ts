@@ -21,8 +21,12 @@ function buildSchedulerTools(): ToolSet {
                 label: z.string().describe("Short human-readable name, e.g. 'morning briefing'"),
                 prompt: z.string().describe("Message to send or prompt to run through the agent"),
                 schedule: z.string().describe("Cron expression or ISO 8601 datetime"),
-                recurring: z.boolean().describe("true = repeats on cron schedule, false = fires once"),
-                mode: z.enum(["message", "agent"]).describe("'message' = send text directly, 'agent' = run through AI"),
+                recurring: z
+                    .boolean()
+                    .describe("true = repeats on cron schedule, false = fires once"),
+                mode: z
+                    .enum(["message", "agent"])
+                    .describe("'message' = send text directly, 'agent' = run through AI"),
                 platform: z.string().describe("Platform, e.g. 'telegram'"),
                 channelId: z.string().describe("Channel or chat ID to deliver to"),
             }),
@@ -35,7 +39,7 @@ function buildSchedulerTools(): ToolSet {
                     args.recurring,
                     args.mode,
                     args.platform,
-                    args.channelId
+                    args.channelId,
                 );
                 registerTask(task);
                 return `Task created (id=${task.id}): "${task.label}" — ${task.schedule}${
@@ -56,7 +60,7 @@ function buildSchedulerTools(): ToolSet {
                         (t) =>
                             `[${t.id}] "${t.label}" | ${t.schedule} | ${
                                 t.recurring ? "recurring" : "one-shot"
-                            } | mode=${t.mode}`
+                            } | mode=${t.mode}`,
                     )
                     .join("\n");
             },
@@ -84,7 +88,9 @@ function buildSchedulerTools(): ToolSet {
                     .map((j) => {
                         const nextTime = j.nextFireTime;
                         const timeStr = nextTime ? nextTime.toISOString() : "unknown";
-                        const timeUntil = nextTime ? Math.round((nextTime.getTime() - now.getTime()) / 1000) : 0;
+                        const timeUntil = nextTime
+                            ? Math.round((nextTime.getTime() - now.getTime()) / 1000)
+                            : 0;
                         return `[Task ${j.id}] Next fire: ${timeStr} (in ${timeUntil}s)`;
                     })
                     .join("\n");
@@ -127,11 +133,14 @@ function buildMemoryTools(): ToolSet {
                     .string()
                     .nullable()
                     .optional()
-                    .describe("Thread/channel key for this chat; null or omit for DM or non-thread context"),
+                    .describe(
+                        "Thread/channel key for this chat; null or omit for DM or non-thread context",
+                    ),
             }),
             execute: async (args) => {
                 const raw = args.threadId;
-                const thread = raw == null || (typeof raw === "string" && raw.trim() === "") ? null : raw;
+                const thread =
+                    raw == null || (typeof raw === "string" && raw.trim() === "") ? null : raw;
                 const n = await clearConversationHistory(args.userId, args.platform, thread);
                 return `Cleared ${n} stored message row(s) from the local conversation history.`;
             },
@@ -140,12 +149,14 @@ function buildMemoryTools(): ToolSet {
 }
 
 function prefixToolKeys(prefix: string, tools: ToolSet): ToolSet {
-    return Object.fromEntries(Object.entries(tools).map(([name, t]) => [`${prefix}__${name}`, t])) as ToolSet;
+    return Object.fromEntries(
+        Object.entries(tools).map(([name, t]) => [`${prefix}__${name}`, t]),
+    ) as ToolSet;
 }
 
 async function connectExternalMcp(
     name: string,
-    config: ExternalMcpStdioConfig
+    config: ExternalMcpStdioConfig,
 ): Promise<{ tools: ToolSet; client: MCPClient } | null> {
     try {
         const client = await createMCPClient({
@@ -192,7 +203,6 @@ async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
         ...buildMemoryTools(),
     };
 
-
     if (slackEnabled) {
         const conn = await connectExternalMcp("slack", externalMcpServers.slack!);
         if (conn) {
@@ -228,7 +238,7 @@ async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
     }
     if (githubEnabled) {
         lines.push(
-            "**GitHub** — tools whose names start with `github__` (@modelcontextprotocol/server-github; GITHUB_TOKEN)."
+            "**GitHub** — tools whose names start with `github__` (@modelcontextprotocol/server-github; GITHUB_TOKEN).",
         );
     }
 

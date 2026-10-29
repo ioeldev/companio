@@ -10,7 +10,7 @@ export const getTemperatureTool = tool({
     }),
     execute: async (args) => {
         const response = await fetch(
-            `https://api.open-meteo.com/v1/forecast?latitude=${args.latitude}&longitude=${args.longitude}&current=temperature_2m&temperature_unit=fahrenheit`
+            `https://api.open-meteo.com/v1/forecast?latitude=${args.latitude}&longitude=${args.longitude}&current=temperature_2m&temperature_unit=fahrenheit`,
         );
         const data: { current?: { temperature_2m?: number } } = await response.json();
         const temp = data.current?.temperature_2m;

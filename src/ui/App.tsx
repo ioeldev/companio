@@ -155,7 +155,9 @@ export function App() {
         <button
             onClick={() => setShowApiTester((v) => !v)}
             className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
-                showApiTester ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white/60"
+                showApiTester
+                    ? "bg-white/10 text-white"
+                    : "text-white/40 hover:bg-white/5 hover:text-white/60"
             }`}
         >
             <IconCode />
@@ -181,7 +183,9 @@ export function App() {
                     <button
                         onClick={() => setShowApiTester((v) => !v)}
                         className={`text-xs px-2.5 py-1 rounded transition-colors ${
-                            showApiTester ? "bg-white/15 text-white" : "text-white/40 hover:text-white/60"
+                            showApiTester
+                                ? "bg-white/15 text-white"
+                                : "text-white/40 hover:text-white/60"
                         }`}
                     >
                         API
@@ -195,7 +199,11 @@ export function App() {
                             <div className="space-y-4">
                                 <div className="flex items-center gap-4">
                                     <h2 className="text-xl font-bold">API Tester</h2>
-                                    <Button variant="ghost" size="md" onClick={() => setShowApiTester(false)}>
+                                    <Button
+                                        variant="ghost"
+                                        size="md"
+                                        onClick={() => setShowApiTester(false)}
+                                    >
                                         ✕ Close
                                     </Button>
                                 </div>

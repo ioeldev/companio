@@ -58,7 +58,8 @@ ${task.threadId ? `- **Thread ID**: ${task.threadId}` : ""}`;
     };
 
     const formatting =
-        platformFormatting[task.platform as keyof typeof platformFormatting] || platformFormatting.default;
+        platformFormatting[task.platform as keyof typeof platformFormatting] ||
+        platformFormatting.default;
 
     return baseContext + formatting;
 }
@@ -74,7 +75,7 @@ export interface IntegrationContext {
 export function buildSystemPrompt(
     task: AgentTask,
     memories: MemoryRow[],
-    integrations: IntegrationContext = {}
+    integrations: IntegrationContext = {},
 ): string {
     const platformBlock = buildPlatformBlock(task);
     const memoriesForDisplay = memoriesWithoutCavemanKey(memories);
@@ -99,7 +100,9 @@ export function buildSystemPrompt(
 - When sending a message unprompted (e.g. a morning briefing), use the user's preferred Slack channel if stored in memory.`
         : "";
 
-    const capabilitiesBlock = integrations.capabilitiesSection ? `\n${integrations.capabilitiesSection}\n` : "";
+    const capabilitiesBlock = integrations.capabilitiesSection
+        ? `\n${integrations.capabilitiesSection}\n`
+        : "";
 
     const cavemanLevel = resolveCavemanLevel(memories);
     const cavemanBlock = cavemanLevel ? buildCavemanBlock(cavemanLevel) : "";
