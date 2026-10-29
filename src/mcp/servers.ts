@@ -24,6 +24,16 @@ export const externalMcpServers: Record<string, ExternalMcpStdioConfig> = {
             `Authorization: Bearer ${process.env.CLICKUP_API_KEY ?? ""}`,
         ],
     },
+    linear: {
+        command: "bunx",
+        args: [
+            "-y",
+            "mcp-remote",
+            "https://mcp.linear.app/mcp",
+            "--header",
+            `Authorization: Bearer ${process.env.LINEAR_API_KEY ?? ""}`,
+        ],
+    },
     github: {
         command: "bunx",
         args: ["-y", "@modelcontextprotocol/server-github"],
