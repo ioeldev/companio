@@ -10,6 +10,7 @@ export interface Session {
     channelId: string;
     number: number;
     title: string;
+    cwd?: string;
     status: SessionStatus;
     messages: ModelMessage[];
     steps: number;

@@ -83,3 +83,45 @@ Verify locally without model API requests:
 bun test src/sessions/sessions.test.ts
 bunx tsc --noEmit
 ```
+
+## Server workspace and Python
+
+Production Compose mounts `${HOME}/seed` on the server read/write at `/workspace`
+in the container. Before deploying, create it under the same server user that
+runs Compose:
+
+```sh
+mkdir -p ~/seed
+```
+
+`COMPANIO_WORKSPACE_HOST_PATH` optionally overrides the host path. Compose sets
+`COMPANIO_WORKSPACE_ROOT=/workspace`; no change to `.env` is needed for the default.
+The directory must already exist (Compose will not silently create a missing
+source). Rebuild the image and recreate the container to install Python and apply
+the mount. This mount does not expose `~/apps/companio`; place/clone projects under
+`~/seed` to make them available. The model must use `/workspace/...` container paths.
+
+Workspace tools are enabled only for Telegram sessions belonging to
+`TELEGRAM_OWNER_ID`. They support directory listing, paginated reads, exact text
+edits, file creation/replacement, and shell execution. Run Python with `python3`
+through `execute_shell`, including heredoc scripts. Python venv support, Git,
+ripgrep, and patch are installed in the image. Additional project runtimes and
+private-repository authentication require separate setup.
+
+Each session can select its own working directory using `workspace_directory`;
+the choice persists. Shell commands return a job ID immediately; `command_status`
+reads output and exit status or stops a job. Commands default to a five-minute
+limit (up to 30 minutes), keep the last 24,000 output characters, and are stopped
+when their session is paused or the service shuts down. Handles are process-local
+and disappear on restart; inspect results before rerunning an unknown command.
+
+File tools validate paths and symlinks against the workspace root. **Shell/Python
+are trusted-owner code execution inside the bot container, not a filesystem
+sandbox.** They can access other container files and the network. Child processes
+receive a reduced environment, but this does not isolate them from credentials
+accessible elsewhere in the container. The Docker socket is not mounted. Use
+separate checkouts/worktrees when sessions modify the same repository.
+
+The earlier session-only limitation concerning absent filesystem tools is
+superseded by this workspace configuration. Other platforms retain their current
+tool sets; web research tools are still a separate integration.

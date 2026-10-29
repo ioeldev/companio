@@ -1,3 +1,4 @@
+import { buildWorkspaceTools, stopWorkspaceCommands } from "../tools/workspace.ts";
 import { ObjectId } from "mongodb";
 import { ToolLoopAgent, stepCountIs, tool, type ModelMessage } from "ai";
 import { z } from "zod";
@@ -30,6 +31,7 @@ export async function pauseSession(s: Session) {
         },
     );
     running.get(String(s._id))?.abort();
+    stopWorkspaceCommands(String(s._id));
 }
 
 async function advance(s: Session) {
@@ -37,6 +39,22 @@ async function advance(s: Session) {
     running.set(String(s._id), abort);
     try {
         const caps = getCapabilities();
+        const workspaceRoot = process.env.COMPANIO_WORKSPACE_ROOT?.trim();
+        const workspaceEnabled =
+            !!workspaceRoot && process.env.TELEGRAM_OWNER_ID?.trim() === s.userId;
+        const workspaceTools = workspaceEnabled
+            ? buildWorkspaceTools({
+                  root: workspaceRoot!,
+                  sessionId: String(s._id),
+                  cwd: s.cwd,
+                  setCwd: async (cwd) => {
+                      await sessions().updateOne({ _id: s._id }, { $set: { cwd } });
+                  },
+              })
+            : {};
+        const workspacePrompt = workspaceEnabled
+            ? `\nWorkspace tools are available: list_files, read_file, write_file, edit_file, workspace_directory, execute_shell, command_status. Host ~/seed is mounted at ${workspaceRoot}. Current directory: ${s.cwd || workspaceRoot}. Python is available through python3 in execute_shell. Use these tools for local code tasks and file inspection. Poll commands until finished and verify exit codes. Preserve user files and exact requested paths. Never assume a host path is mounted. Keep edits inside the workspace. Avoid editing the same checkout in simultaneous sessions; prefer separate git worktrees.`
+            : "";
         const instructions =
             buildSystemPrompt(
                 {
@@ -49,7 +67,7 @@ async function advance(s: Session) {
                 },
                 await getMemories(s.userId),
                 {
-                    capabilitiesSection: caps.capabilitiesPromptSection,
+                    capabilitiesSection: caps.capabilitiesPromptSection + workspacePrompt,
                     slackEnabled: caps.slackEnabled,
                     clickupFolderId: process.env.CLICKUP_FOLDER_ID,
                     clickupMemberId: process.env.CLICKUP_MEMBER_ID,
@@ -63,6 +81,7 @@ async function advance(s: Session) {
             stopWhen: stepCountIs(1),
             tools: {
                 ...caps.tools,
+                ...workspaceTools,
                 ask_user: tool({
                     description: "Ask the user a required question and wait for their answer.",
                     inputSchema: questionSchema,
@@ -177,6 +196,7 @@ async function tick() {
 }
 export async function stopSessionWorker() {
     clearInterval(timer);
+    stopWorkspaceCommands();
     for (const abort of running.values()) abort.abort();
     await sessions().updateMany(
         { status: "running" },
