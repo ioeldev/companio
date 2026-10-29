@@ -19,7 +19,7 @@ function buildSchedulerTools(): ToolSet {
             inputSchema: z.object({
                 userId: z.string().describe("User ID"),
                 label: z.string().describe("Short human-readable name, e.g. 'morning briefing'"),
-                prompt: z.string().describe("Message to send or prompt to run through the agent"),
+                prompt: z.string().describe("Message to send or prompt to run through the AI"),
                 schedule: z.string().describe("Cron expression or ISO 8601 datetime"),
                 recurring: z
                     .boolean()
@@ -181,6 +181,7 @@ export interface CompanionCapabilities {
     capabilitiesPromptSection: string;
     slackEnabled: boolean;
     clickupEnabled: boolean;
+    linearEnabled: boolean;
     githubEnabled: boolean;
 }
 
@@ -196,6 +197,7 @@ function githubTokenPresent(): boolean {
 async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
     const slackEnabled = !!process.env.SLACK_BOT_TOKEN;
     const clickupEnabled = !!process.env.CLICKUP_API_KEY;
+    const linearEnabled = !!process.env.LINEAR_API_KEY;
     const githubEnabled = githubTokenPresent();
 
     const tools: ToolSet = {
@@ -213,6 +215,14 @@ async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
     if (clickupEnabled) {
         console.log("Connecting to ClickUp MCP server");
         const conn = await connectExternalMcp("clickup", externalMcpServers.clickup!);
+        if (conn) {
+            Object.assign(tools, conn.tools);
+            mcpClients.push(conn.client);
+        }
+    }
+    if (linearEnabled) {
+        console.log("Connecting to Linear MCP server");
+        const conn = await connectExternalMcp("linear", externalMcpServers.linear!);
         if (conn) {
             Object.assign(tools, conn.tools);
             mcpClients.push(conn.client);
@@ -236,6 +246,11 @@ async function buildCompanionCapabilities(): Promise<CompanionCapabilities> {
     if (clickupEnabled) {
         lines.push("**ClickUp** — tools whose names start with `clickup__` (ClickUp MCP).");
     }
+    if (linearEnabled) {
+        lines.push(
+            "**Linear** — tools whose names start with `linear__` (Linear MCP; LINEAR_API_KEY).",
+        );
+    }
     if (githubEnabled) {
         lines.push(
             "**GitHub** — tools whose names start with `github__` (@modelcontextprotocol/server-github; GITHUB_TOKEN).",
@@ -252,6 +267,7 @@ When the user asks what you can access or which integrations you have, answer us
         capabilitiesPromptSection,
         slackEnabled,
         clickupEnabled,
+        linearEnabled,
         githubEnabled,
     };
 }
